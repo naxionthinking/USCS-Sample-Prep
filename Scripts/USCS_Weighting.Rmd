@@ -7,10 +7,13 @@ output:
 
 
 ```{r Load in Packages, message=F, warning=F, echo=F}
-if (!require("tidyverse")) install.packages("tidyverse")
-if (!require("readxl")) install.packages("readxl")
-if (!require("stringi")) install.packages("stringi")
-if (!require("lubridate")) install.packages("lubridate")
+if (!require("pacman")) install.packages("pacman")
+
+# Loads in necessary packages, and installs them if you don't have them installed
+pacman::p_load("tidyverse",
+               "readxl",
+               "stringi",
+               "lubridate")
 
 source('Config_and_Helpers.R')
 

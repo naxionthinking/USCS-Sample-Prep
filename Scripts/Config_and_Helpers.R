@@ -1,8 +1,10 @@
-if (!require("glue")) install.packages("glue")
-if (!require("stringi")) install.packages("stringi")
-if (!require("tidyverse")) install.packages("tidyverse")
-if (!require("kableExtra")) install.packages("kableExtra")
-if (!require("knitr")) install.packages("knitr")
+if (!require("pacman")) install.packages("pacman")
+
+# Loads in necessary packages, and installs them if you don't have them installed
+pacman::p_load("tidyverse",
+               "readxl",
+               "kableExtra",
+               "knitr")
 
 f_string <- function(str) str %>% glue() %>% as.character() 
 

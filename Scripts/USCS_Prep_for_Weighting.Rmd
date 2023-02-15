@@ -1,0 +1,957 @@
+---
+title: "USCS Read Step 1"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  markdown:
+    wrap: 75
+---
+
+### Preparatory Steps
+
+Consult `ReadMe.md` for instructions on how to configure the inputs
+properly before running this script
+
+### Notes
+
+-   As a heads up we tripled the recommended amount for SP 133.
+
+-   Please note the variable `TOT_RVLV_INT_AM` was removed from the sample
+    file but the spaces for it remain. **The new Customer Acquisition Code
+    variable may show up on the end of this file. If you see it, please
+    remove it.**
+
+-   If you have any questions about the files or checks to be done, please
+    let me or the PM team know. The subject lines will now be the same for
+    everyone as everyone is NPS to start.
+
+-   All NPS respondents, including NPS augments, will see subject line "6"
+    (10 Quick Questions about your [American Express Card])."
+
+-   **This code will output warnings and messages.** The warnings indicate
+    a check is not met. These will be printouts with "Warning:" before
+    them. If a check is passed, a message will be printed with "SUCCESS:"
+    before it. If any warnings are printed, figure out why and report if
+    the warning says to.
+
+### Dependencies
+
+```{r Load in Packages, message=F, warning=F, echo=F}
+if (!require("tidyverse")) install.packages("tidyverse")
+if (!require("readxl")) install.packages("readxl")
+if (!require("stringi")) install.packages("stringi")
+
+source('Config_and_Helpers.R')
+
+options(scipen = 9999, # Remove scientific notation
+        dplyr.summarise.inform = FALSE) 
+
+knitr::opts_chunk$set(results = "asis",
+                      echo=F)
+```
+
+### Data Loading
+
+```{r Load in base and spend dataframes}
+all_base <- load_base() %>%
+  # Blank out unnecessary personal information
+  mutate(nm_pfx_tx  = "",
+         nm_suff_tx  = "",
+         best_addr_line1_tx = "",
+         best_addr_line2_tx = "",
+         sal_tx = "",
+         home_phone_ln_no = "",
+         new_smart_rev = as.numeric(new_smart_rev_char)) %>%
+  filter(!cell_code %in% c("","CNGR54")) %>% #*From Ops email: (please take out all counts for Augment 54);
+  filter(marketer_code != "") #*from ops email 9 28 22: #take out the three people missing marketer_code,
+
+all_spend <- load_spend() %>%
+  mutate(gmpi_base_cust_id = customer_id) %>%
+  filter(substring(customer_id, 1, 1) != " ") # Remove blank space at start of ID
+```
+
+### Cell Code Checking
+
+-   Compare the total amount of main sample received to the amount of
+    sample requested
+-   Verify no missing cell codes
+
+```{r Check Cell Codes, message=F}
+# Create a frequency table of each cell code
+cell_code_freq <- all_base %>% 
+  freq_table("cell_code", caption = "Cell Code Frequencies")
+```
+
+```{r }
+# Break the cell codes into the main survey codes and augmented survey codes
+# Main Survey has 'Cell_Codes' that start with 'CCSG' 
+main_survey_ccs <- cell_code_freq %>% filter(str_starts(cell_code, "CCSG")) 
+aug_survey_ccs <- cell_code_freq %>% 
+  filter(!str_starts(cell_code, "CCSG") & str_starts(cell_code, "C"))
+```
+
+```{r message=F}
+# Load in the expected frequencies from the helper file
+req_sp_codes <- read_excel(SAMPLE_PREP_PATH,
+                           sheet = "Sp_Code_Freqs") %>% 
+  set_names(c("sp_code", "card_name", "Total")) %>% 
+  mutate(sp_code = glue("SP{sp_code}")) %>% 
+  drop_na(sp_code)
+```
+
+```{r}
+if (sum(main_survey_ccs$Freq) != sum(req_sp_codes$Total)){
+  warning("The Main sample recieved does not match the sample requested
+          Provide an explanation or resolution to the difference. Figure out what's wrong. 
+          Details may become more apparent in step 10 below")
+} else{
+  message("SUCCESS: The size of the main Sample recieved matches the sample requested")
+}
+
+missing_ccs <- cell_code_freq %>% dplyr::select(cell_code) %>% 
+  filter(!cell_code %in% unique(c(main_survey_ccs$cell_code,
+                                  aug_survey_ccs$cell_code)))
+
+if (nrow(missing_ccs) > 0) {
+  warning("Cell Code detected not in main or augmented survey detected. Check MISSING_CCS dataframe for these codes")
+} else{
+  message("SUCCESS: All cell codes match format for main or augmented surveys")
+}
+```
+
+### Check to make sure everyone has a spend and tenure and new-product-tenure.
+
+-   cell_code 68 can have any marketer code but if it does have 135, notify
+    PM
+
+```{r}
+# Check missing account spend and tenure add
+acct_spend_add_t_NAs <- all_base %>% dplyr::select(account_spend, t_add) %>% 
+  sapply(function(x) sum(is.na(x))) %>% as.data.frame() %>% 
+  set_names("No. Missing Values")
+
+acct_spend_add_t_NAs_tab <- acct_spend_add_t_NAs %>% 
+  make_nice_table("Missing Values Account Spend and Tenure Add") 
+
+if(acct_spend_add_t_NAs["account_spend",] > 0){
+  warning("ACCOUNT SPEND has missing values")
+} else{
+  message("SUCCESS: ACCOUNT SPEND does not have missing values")
+}
+
+if(acct_spend_add_t_NAs["t_add",] > 0){
+  warning("New Product Tenure has missing values")
+}else{
+  message("SUCCESS: New Product Tenure does not have missing values")
+}
+# Check missing set up dates
+miss_setup_dt <- all_base[all_base$setup_dt == "",]
+if (nrow(miss_setup_dt) > 0){
+  warning("Missing Set up Date. Check miss_setup_dt variable")
+}else{
+  message("SUCCESS: No missing set up dates")
+}
+
+# Check missing marketer codes
+miss_marketer_code <- all_base[all_base$marketer_code == "",]
+if (nrow(miss_marketer_code) > 0){
+  warning("Missing Marketer Code. Check miss_marketer_code variable")
+}else{
+  message("SUCCESS: No missing marketer codes")
+}
+
+cn68_market_codes <- all_base[all_base$cell_code == 'CN68',] %>% 
+  dplyr::select(cell_code, marketer_code) %>% 
+  mutate(is_not_sp135 = marketer_code != "SP135")
+
+if (nrow(cn68_market_codes) > 0){
+  warning("There are observations with Cell Code 'CN68'")
+  if (sum(cn68_market_codes$is_not_sp135) > 0){
+  warning("Not all marketer codes are SP135 for cell codes CN68. Alert OPS/PM") 
+  } else {
+    message("ITS OKAY because all marketer codes are SP135")
+  }
+} else{
+    message("SUCCESS: No observations with Cell Code 'CN68'")
+  }
+```
+
+**ACTION NEEDED**
+
+-   The next two chunks output two csv's to be sent to the operations
+    manager in an email
+
+    -   CSV `Main_Code_Freqs_MONTH_YEAR.csv` is found in the
+        `Files_to_send` folder
+
+    -   CSV `Cell_Code_Freqs_MONTH_YEAR.csv` is found in the
+        `Files_to_send` folder
+
+```{r }
+# Table with marketer code frequencies for cell codes "CCSG01", "CCSG02", "CCSG03"
+main_code_freq <- all_base %>% 
+  filter(cell_code %in% c("CCSG01", "CCSG02", "CCSG03")) %>% 
+  freq_table("marketer_code", 
+             caption = "Marketer Code Frequencies for Main Cell Codes")
+
+# Write to csv to send to OPS Manager 
+main_code_freq %>%  
+  write_csv(f_string("../Files_to_send/Main_Code_Freqs_{MONTH_SHORT}_{YEAR}.csv")) 
+```
+
+```{r}
+cell_code_freq <- cell_code_freq %>% 
+  # Extract two digit number from cell code and append it to either Drop or Augment
+  mutate(naw_cell_code = if_else(str_starts(cell_code, "CCS"),
+                                 paste("CCSG DROP", 
+                                        str_extract(cell_code, "[0-9]{2}")),
+                                 paste("Augment Cell",
+                                       str_extract(cell_code, "[0-9]{2}")))
+         ) %>% 
+  dplyr::select(cell_code, naw_cell_code, Freq) %>% 
+  arrange(str_extract(cell_code, "[0-9]{2}"))
+
+# Save file to be sent to PM
+cell_code_freq %>% 
+  write_csv(f_string("../Files_to_send/Cell_Code_Freqs_{MONTH_SHORT}_{YEAR}.csv"))
+
+ccf <- cell_code_freq %>% 
+  make_nice_table("Cell Code Frequencies with NAW Cell Codes")
+```
+
+### Check validity of userID and password
+
+```{r}
+invalid <- all_base %>% 
+  dplyr::select(account_number, personalization1, personalization2) %>% 
+  mutate(new_user_id = gsub("  ", "", personalization1) %>% trimws(), # Remove double spaces and surrounding white space from username
+         new_password = gsub("  ", "", personalization2) %>% trimws(),  # Remove double spaces and surrounding white space from password
+         VALID = case_when(
+           # Missing Value
+           new_user_id == "" | new_password == "" ~ 1, 
+           # Wrong Length
+           nchar(new_user_id) != 7 | nchar(new_password) != 8 ~ 2,
+           # First character of ID not 'u'
+           substr(new_user_id, 1, 1) != 'u' ~ 3, 
+           # userID should be all digits and password should be characters
+           !(substr(new_user_id, 2, 7) %>% is_numbers_only() & 
+               new_password %>% is_letters_only) ~ 4, 
+           TRUE ~ 0) # If none of the above cases, it's valid
+         ) %>% 
+  filter(VALID != 0) # Remove all valid cases
+
+if (nrow(invalid) > 0){
+  warning("Some invalid passwords or usernames found. Report to Manager")
+  invalid %>% make_nice_table("Invalid Usernames and Passwords")
+} else{
+  message("SUCCESS: All passwords and usernames valid")
+}
+```
+
+### Check for duplicates
+
+```{r}
+all_base_dupes <- all_base[duplicated(all_base$gmpi_base_cust_id),]
+all_spend_dupes <- all_spend[duplicated(all_spend$gmpi_base_cust_id),]
+
+if (nrow(all_base_dupes) > 0){
+  warning("Duplicate Base customer IDs in the Allbase dataframe")
+  print(all_base_dupes$gmpi_base_cust_id)
+} else{
+  message("SUCCESS: No duplicates in Allbase dataframe")}
+
+if (nrow(all_spend_dupes) > 0){
+  warning("Duplicate base customer IDs in the Allspend dataframe")
+  print(all_spend_dupes$gmpi_base_cust_id)
+} else{
+  message("SUCCESS: No duplicates in Allspend dataframe")}
+```
+
+### Merge Allspend and Allbase
+
+-   Code to account for the all Augments when assigning values to
+    'naw_cell_code'
+-   Add code for new Augments
+-   Make sure the proper number of records remain
+
+```{r}
+all <- inner_join(all_base, all_spend, by = "gmpi_base_cust_id") %>% 
+  mutate(setup_year = substr(setup_dt, 1, 4) %>% as.numeric(),
+         setup_month = substr(setup_dt, 6,7) %>% as.numeric(),
+         tenure_var = 12*(YEAR-1-setup_year)+(MONTH_NO+12-setup_month),
+         account_spend = as.numeric(account_spend),
+         tenure_cat = case_when(
+           tenure_var <   5 ~ 1,
+           tenure_var <  16 ~ 2,
+           tenure_var <  25 ~ 3,
+           tenure_var <  49 ~ 4,
+           tenure_var <  73 ~ 5,
+           tenure_var < 109 ~ 6,
+           tenure_var < 145 ~ 7,
+           tenure_var < 181 ~ 8,
+           tenure_var < 241 ~ 9,
+           TRUE ~ 10),
+         
+         spend = case_when(
+           account_spend <     0 ~ "A",
+           account_spend ==    0 ~ "A",
+           account_spend <  1500 ~ "B",
+           account_spend <  2500 ~ "C",
+           account_spend <  5000 ~ "D",
+           account_spend <  7500 ~ "E",
+           account_spend < 10000 ~ "F",
+           account_spend < 20000 ~ "G",
+           account_spend < 35000 ~ "H",
+           account_spend < 50000 ~ "I",
+           TRUE ~ "J"),
+         
+         top_spender = if_else(account_spend < 50000, 0, 1),
+         # Spend cat3 is the numeric value of the account spend's alphabet positions (A:1, B:2 ... J:10)
+         spend_cat3 = match(spend, LETTERS), 
+         
+         naw_cell_code = if_else(str_starts(cell_code, "CCSG"),
+                                 gsub("CCSG", "DROP", cell_code),
+                                 gsub("[A-Z]{2,}", "CELL", cell_code)),
+         
+         naw_type = if_else(cell_code %in% c("CCSG01", "CCSG02", "CCSG03"),
+                            "MAIN",
+                            "AUGMENT")
+         )
+
+
+if (nrow(all) != nrow(all_base)){
+  warning("Size of merged dataframe does not match original dataframe.")
+} else{
+  message("SUCCESS: Size of merged dataframe matches original dataframe")
+}
+
+```
+
+```{r}
+# Save datasets and remove from memory
+all_base %>% write_csv("../Data/all_base_{MONTH_SHORT}_{YEAR}.csv" %>% f_string())
+all_spend %>% write_csv("../Data/all_spend_{MONTH_SHORT}_{YEAR}.csv" %>% f_string())
+#rm(all_base, all_spend) 
+```
+
+### Checking for Duplicate Keys in Merged Data frame
+
+```{r message=F}
+# First checking distribution of sample by Augment/MAIN;
+naw_freq_table <- all %>%
+  freq_table(c("naw_type", "naw_cell_code"),
+             caption="Naw Type vs Naw Cell Code Frequencies")
+```
+
+```{r }
+# Identify duplicates for customer id and username/password
+cust_id_dupes <- all[duplicated(all$gmpi_base_cust_id),]
+pers_dupes <- all[duplicated(all[,c("personalization1", "personalization2")]),]
+
+if (nrow(cust_id_dupes) > 0){
+  warning("There are customer ID duplicates in the merged dataframe")
+  print(cust_id_dupes$gmpi_base_cust_id)
+} else{
+  message("SUCCESS: No Customer ID duplicates in the merged dataframe")
+}
+
+if (nrow(pers_dupes) > 0){
+  warning("There are userID/password duplicates in the merged dataframe")
+  print(pers_dupes[,c("personalization1", "personalization2")])
+} else{
+  message("SUCCESS: No userID/password duplicates in the merged dataframe")
+}
+```
+
+### DMA Frequency
+
+12) Run ReadStep1.sas from line 295 (BestDMA Frequency) to line 300 (output
+    to 'DMA Check') Frequency data gets written into 'DMA Check' columns F
+    & G. Verify that everything got written okay. If all DMAs are
+    acceptable, 'DMA Check'!E215 should say "All Good" and 'Main List'!F37
+    should say "Okay" If they say something different, resolve the problem
+    or note the exception
+
+    **I'M NOT WHATS HAPPENING HERE TO BE ABLE TO CODE IT UP**
+
+```{r}
+
+```
+
+### Frequency Tables for Spend and Tenure
+
+-   Split the sample into Main and Augment
+
+-   Frequency tables of spend tenure categories, and tenure_var for main
+    samples
+
+```{r}
+# Split dataframe into main and augmented
+main <- all %>% filter(naw_type == "MAIN") %>% 
+  mutate(customer_id = gmpi_base_cust_id %>% as.numeric())
+augment <- all %>% filter(naw_type == "AUGMENT")
+
+```
+
+```{r}
+spend_freq_table <- main %>% 
+  freq_table("spend", caption="Spend Category Frequencies")
+
+tenure_freq_table <- main %>% 
+  freq_table("tenure_cat", caption="Tenure Category Frequencies")
+
+spend_freq_table_cat1 <- main %>% 
+  filter(tenure_cat == 1) %>%
+  freq_table("spend", caption="Spend Category Freqs for Tenure Category 1")
+
+tenure_freq_table_cat1 <- main %>% 
+  filter(tenure_cat == 1) %>% 
+  freq_table("tenure_var", caption="Tenure Var Frequencies for Tenure Category 1")
+```
+
+### Sp Code Checking
+
+-   Compare totals for desired sp codes to requested sp code totals
+
+```{r}
+main_sp_codes <- main %>% 
+  freq_table("marketer_code", caption = "Sp Code Frequencies")
+```
+
+```{r}
+# Check if the requested totals for each code matches the observed total
+check_sp_codes <- main_sp_codes %>% 
+  dplyr::select(marketer_code, Freq) %>% 
+  left_join(req_sp_codes, by = c("marketer_code" = "sp_code")) %>% 
+  mutate(difference = abs(Freq - Total)) %>% # This difference should be 0
+  rename(Obs_Freq = Freq, Req_Freq = Total)
+
+
+if (sum(check_sp_codes$difference) > 0){
+  warning("Frequencies of Observed Sp Codes do not match requested totals for the following codes")
+  print(check_sp_codes %>% filter(difference > 0))
+} else{
+  message("SUCCESS: All observed frequencies of sp codes match requested totals. ")
+}
+```
+
+-   Ensure Requested Sp Codes do not have spending category A.
+
+```{r}
+sp_code_a <- main[main$spend == "A",]$marketer_code %>% unique()
+  #freq_table("marketer_code") # This is in the SAS code but doesnt seem necessary
+
+# The spcodes codes below should not have SPEND = A;
+# /* SP 156 added in JULY 2018 */
+sp_code_no_a <- c("SP111",
+                  "SP112",
+                  "SP113",
+                  "SP114",
+                  "SP115",
+                  "SP117",
+                  "SP118",
+                  "SP123",
+                  "SP127",
+                  "SP132",
+                  "SP136",
+                  "SP145",
+                  "SP153",
+                  "SP156")
+
+# Verifying that Sp codes that should not have spending cateogry "A" do not have spending code "A"
+main_sp_codes_spend <- main %>% filter(marketer_code %in% sp_code_no_a)
+main_sp_codes_spend_ct <- table(main_sp_codes_spend$marketer_code,
+                                main_sp_codes_spend$spend) %>% 
+  make_nice_table("SP Codes vs Spending Category (None should have Category A)")
+```
+
+```{r }
+tab <- main_sp_codes_spend_ct %>% as.data.frame() %>% 
+  set_names(c("sp_code","spend", "Freq"))
+
+if ("A" %in% tab$spend) {
+  bad_sp_code_a <- tab$sp_code[tab$spend == "A"]
+  for (code in bad_sp_code_a) {
+    warning("Spending category A found in Sp Code: {code}" %>% f_string())
+    cat("\n")}
+} else{
+  message("SUCCESS: No Spend A category found for Sp Codes which should not have that category")
+}
+```
+
+-   Ensure Minimum Account spend is greater than 0 for the requested Sp
+    Codes
+
+```{r}
+# Determine which sp codes have a minimum spend greater than 0
+min_acct_spend_a <- main_sp_codes_spend %>% 
+  group_by(marketer_code) %>% 
+  summarize(min_spend = min(account_spend)) %>% 
+  mutate(spend_zero = !(min_spend > 0)) # min spend not greater than 0
+
+if (sum(min_acct_spend_a$spend_zero > 0)){
+  bad_min_spend <- min_acct_spend_a$marketer_code[min_acct_spend_a$spend_zero]
+    for (code in bad_min_spend) {
+      warning("Minimum Account spend is not greater than zero for requested Sp Code: {code}" %>% f_string())
+      cat("\n")}
+} else{
+  message("SUCCESS: Minimum Account spend is greater than zero for all requested Sp codes")
+}
+
+```
+
+-   Compare:
+
+    -   A list of all SPCODES in the sample
+    -   A list of all SPCODES in the sample that have any observations with
+        Spend = A
+    -   An independent list of SPCODES that should not have spend = A.
+
+-   **All records in list 1, should exist in either list 2 or list 3; And,
+    not both;**
+
+-   Most of these should appear in 2 of the lists [list 1] & (list2 or
+    list3) (check_a2)
+
+-   If records appear in all 3 of the lists, that needs to be addressed.
+    (Check_a3)
+
+    -   These will be records with Spend = A, when no '\$0 spend' records
+        should have been selected
+
+-   If a records appears in only 1 of the lists, that's an issue that
+    should be looked into, but is probably not a problem. (check_a1)
+
+    -   These should be records that could have someone with Spend = A, but
+        didn't.
+    -   Check the UC and SAT table to make sure that The file at most
+        recent folder of `L:\Amex.549\Universe Counts CMC-SAT:`
+        -   `\pm1\27-610\Sampling-Weighting\UCs\2022`
+
+        -   `\pm1\27-610\Sampling-Weighting\SAT Files\2022`
+
+        -   Spend = "A" has a very low chance of being selected (low
+            relative frequency\$0/grand total--5% as cutting edge for
+            post-sub )
+    -   **If someone appears in this case, note and resolve/explain the
+        issue**
+
+```{r}
+check_a <- data.frame(sp_code = unique(c(sp_code_a,
+                                         sp_code_no_a, 
+                                         main_sp_codes$marketer_code))) %>% 
+  # Determine which list each sp code is in
+  mutate(sp_code_a = sp_code %in% sp_code_a,
+         sp_code_no_a = sp_code %in% sp_code_no_a,
+         sp_code_main = sp_code %in% main_sp_codes$marketer_code,
+         # Check how many lists the code is in
+         sp_code_check = sp_code_a + sp_code_no_a + sp_code_main)
+
+check_a1 <- check_a[check_a$sp_code_check == 1,'sp_code']
+check_a2 <- check_a[check_a$sp_code_check == 2,'sp_code']
+check_a3 <- check_a[check_a$sp_code_check == 3,'sp_code']
+
+if (length(check_a2) == nrow(check_a)){ # Everything should be in check2
+  message("SUCCESS: All Sp codes are in only two of the lists")
+} else if (length(check_a1) > 0 ){
+    for (code in check_a1) {
+      warning("Sp Code: {code} is only in one of the lists. Look at description above for what to do" %>% f_string())
+      cat("\n")}
+  warning("")
+} else if (length(check_a3) > 0 ){
+    for (code in check_a3) {
+      warning("Sp Code: {code} is in all three lists" %>% f_string())
+      cat("\n")}
+    warning("Look at description above for what to do")
+}
+```
+
+### New Open Segment
+
+-   New Open Segment file received every May/June
+
+-   The code reads in a list customer_ids classified segments.
+
+-   No one in the Main sample should be in this file. The dataset that is
+    created in the merge in the last step should have no records.
+
+    -   If someone appears here, note and resolve/explain the issue
+
+```{r message=F}
+# Load in new segment data
+open_seg <- read_csv(OPEN_SEG_PATH) %>% 
+  rename(gmpi_base_cust_id = cust_xref_id) %>% 
+  mutate(customer_id = gmpi_base_cust_id %>% as.numeric()) # Get numeric ID
+```
+
+```{r}
+# check distributions
+
+# Customer ID Distribution in Main
+cid_main <- main %>% 
+  dplyr::select(customer_id_main = customer_id) %>% 
+  summary() %>% make_nice_table("Customer ID Main Descriptive Stats")
+
+# Open Segment Customer ID Distribution
+cid_open <- open_seg %>%  
+  dplyr::select(customer_id_open_seg = customer_id) %>% 
+  summary() %>% make_nice_table("Customer ID Open Segment Descriptive Stats")
+
+open_seg_freq <- open_seg %>% freq_table("OPEN_MANAGED_SEGMENT", caption="Open Managed Segment Freqs")
+
+open_seg_dupes <- open_seg[duplicated(open_seg$customer_id),]
+
+if (nrow(open_seg_dupes) > 0){
+  warning("Duplicated Customer IDs in New Open Segment File")
+} else{
+  message("SUCCESS: NO Duplicated Customer IDs in New Open Segment File")
+}
+```
+
+```{r}
+# Check if someone in the main file is in the open segment file
+open_seg_check <- main %>% 
+  inner_join(open_seg, by = c("gmpi_base_cust_id", "customer_id"))
+
+if (nrow(open_seg_check) > 0){
+  warning("Customers in the main file appear in the new segment file")
+  cat('\n')
+  if (nrow(open_seg_check) > 3000){
+    warning("More than 3000 main file customers appear in the new segment. REPORT")
+  } else{
+   message("Less than 3000 main file customers appear in the new segment. Note and explain these customers. No need to report")
+  }
+} else{
+  message("SUCCESS: No main file customers appear in the new segment")
+}
+```
+
+-   Runs a frequency of Tenure by each SP code
+
+    -   Collapses the counts for Tenure of 5+;
+
+-   Generates a count for Early Tenure and Non-Early Tenure
+
+```{r results = "hide"}
+et_tab <- main %>% 
+  count(marketer_code, tenure_cat) %>%
+  spread(tenure_cat, n, fill = 0) %>%
+  make_nice_table("Tenure Frequencies by Marketer Code")
+
+```
+
+```{r }
+et_tab <- et_tab %>% 
+  # Create new variables for the split of early and non-early tenure counts
+  mutate(et = `1`,
+         non_et = rowSums(et_tab[3:11])) %>% 
+  dplyr::select(marketer_code, et, non_et)
+
+"Count of Early Tenure: {sum(et_tab$et)}" %>% f_string() %>% print()
+"Count of Non Early Tenure: {sum(et_tab$non_et)}" %>% f_string() %>% print()
+```
+
+### Diagnostic Tests
+
+-   Keeping the 'Selected' functionality in for now.
+
+```{r}
+mrktr_naw <- table(main$marketer_code, main$naw_cell_code) %>%
+  make_nice_table("Marketer Code vs NAw Cell Code")
+
+main <- main %>% mutate(selected = 0,
+                           # Extract marketer code (i.e. 101 from SP101)
+                          sp_code = str_extract(marketer_code, "[0-9]{3}") %>% 
+                            as.numeric(),
+                           # Extract drop code (i.e. 1 from DROP 01)
+                          drop_code = str_extract(naw_cell_code, "[0-9]{2}") %>% 
+                            as.numeric(),
+                          mv_nps_ind = if_else(selected == 0, "NPS", "MV"),
+                          mr_in_n = if_else(mr_in == 'Y', 1, 2),
+                          subject_line = if_else(selected == 0, 6, 7))
+
+```
+
+```{r }
+write_csv(all, "../Data/all_{MONTH_SHORT}_{YEAR}.csv" %>% f_string())
+write_csv(main, "../Data/main_{MONTH_SHORT}_{YEAR}.csv" %>% f_string())
+```
+
+```{r}
+mr_in_ct <- table(main$mr_in,main$mr_in_n)
+
+if (mr_in_ct[1] == 0 & mr_in_ct[4] == 0){
+  message("SUCCESS: MR IN split worked correctly")
+} else{
+  warning("MR IN split did not work correctly.")}
+```
+
+# Augment Checking
+
+-   Let the Operation's Manager know the frequency by cell_code
+-   All OPEN augment sample gets assigned to NPS
+-   There are no longer any CCSG Augments
+
+**Check distribution of Augment marketer_code by cell_code. Does it align
+with previous month?** *(This may have to be a manual check. I can probably
+pull the distribution from the previous month in the future once this
+script has been utilized for one month and I have the output)*
+
+```{r}
+augment <- augment %>% filter(!marketer_code %in% c("", "SP138", "SP139")) %>% 
+  mutate(customer_id = gmpi_base_cust_id %>% as.numeric())
+
+cell_code_naw_sp_ct <- augment %>% 
+  freq_table(c("naw_cell_code", "cell_code", "marketer_code"), 
+             caption="Naw Cell Code vs Cell Code vs Sp Code Frequencies")
+
+```
+
+Check the Marketer Codes Frequency for each Augment to make sure they align
+with the previous results (originally specs in 'Main list'!D48:D54)
+
+```{r include=F}
+
+cc_aug_freq <- cell_code_freq %>%
+  filter(str_detect(naw_cell_code, "Augment")) %>% 
+  dplyr::select(cell_code, Freq) %>% 
+  full_join(cell_code_naw_sp_ct[,c("cell_code", "Freq")], 
+            by = "cell_code") %>% 
+  mutate(diff = Freq.x != Freq.y) %>% make_nice_table("Marketer Code Freqs")
+
+
+if (sum(cc_aug_freq$diff) > 0){
+  warning("Frequencies of marketer codes in augmented dataset do not match")
+} else{
+  message("SUCCESS: Frequencies of marketer codes in augmented dataset match")
+}
+```
+
+```{r}
+# Check if someone in the augmented file is in the open segment file
+open_seg_check_aug <- augment %>% 
+  inner_join(open_seg, by = c("gmpi_base_cust_id", "customer_id"))
+
+if (nrow(open_seg_check_aug) > 0){
+  warning("Customers in the augmented file appear in the new segment file")
+  cat('\n')
+  if (nrow(open_seg_check_aug) > 3000){
+    warning("More than 3000 augmented file customers appear in the new segment. REPORT")
+  } else{
+   message("Less than 3000 augmented file customers appear in the new segment. Note and explain these customers. No need to report")
+  }
+} else{
+  message("SUCCESS: No augmented file customers appear in the new segment")
+}
+```
+
+### Check the Frequencies of the Augment Data
+
+-   Checking expected specs to actual specs for augmented data.
+
+-   Expected specs found in `Sample_Prep_Helper.xlsx` sheet *Cell_Codes*
+
+-   Check tenure category and var Frequency to make sure they align with
+    the expected specs
+
+    -   Note errors
+
+```{r message=F}
+exp_cell_codes <- read_excel(SAMPLE_PREP_PATH,
+                             sheet = "Augment_Specs")
+```
+
+```{r}
+# Check if someone in the augmented file is in the open segment file
+augment <- augment %>% 
+  left_join(open_seg, by = c("gmpi_base_cust_id", "customer_id"))
+
+tv_ncc_check <- augment %>% 
+  group_by_summary_table("naw_cell_code", "tenure_var") %>% 
+  inner_join(exp_cell_codes, by="naw_cell_code") %>% 
+  dplyr::select(naw_cell_code, min, tenure_var_min, max,tenure_var_max) %>% 
+  mutate(tenure_var_max = if_else(is.na(tenure_var_max), Inf, tenure_var_max),
+         min_not_okay = min < tenure_var_min,
+         max_not_okay = max > tenure_var_max) 
+
+tv_ncc_tab <- tv_ncc_check %>%
+  make_nice_table("Tenure Var by Naw Cell Code")
+
+# Check if augment cell tenure and spends are within expected ranges
+if (sum(tv_ncc_check$min_not_okay) > 0){
+  for (ncc in tv_ncc_check$naw_cell_code[tv_ncc_check$min_not_okay]){
+    warning("Minimum Tenure not correct for {ncc}" %>% f_string())
+    cat("\n")
+  } 
+} else{
+    message("SUCCESS: Minimum tenures are as expected for all codes")
+}
+
+if (sum(tv_ncc_check$max_not_okay) > 0){
+  for (ncc in tv_ncc_check$naw_cell_code[tv_ncc_check$max_not_okay]){
+    warning("Maximum Tenure not correct for {ncc}" %>% f_string())
+    cat("\n")} 
+  } else{
+    message("SUCCESS: Maximum tenures are as expected for all codes")
+}
+```
+
+```{r}
+ten_cat_naw_cell <- augment %>% 
+  group_by_summary_table("naw_cell_code", "tenure_cat") %>%
+  make_nice_table("Tenure Category by Naw Cell Code")
+```
+
+-   Check the Spend Frequency for each Augment to make sure they align with
+    the expected specs
+
+    -   **Note errors**
+
+```{r}
+acct_spend_ncc_check <- open_seg_check_aug %>% 
+  group_by_summary_table("naw_cell_code", "account_spend") %>%
+  inner_join(exp_cell_codes, by = "naw_cell_code") %>% 
+  mutate(bad_spend = (min == 0 & min_spend == ">$0")) %>% 
+  dplyr::select(naw_cell_code, min, min_spend, bad_spend)
+
+acct_spend_ncc <- acct_spend_ncc_check %>% 
+  make_nice_table("Account Spend by Naw Cell Code")
+
+if (sum(acct_spend_ncc_check$bad_spend) > 0){
+  for (ncc in acct_spend_ncc_check$naw_cell_code[acct_spend_ncc_check$bad_spend]){
+    warning("Minimum spend not met for {ncc}" %>% f_string())
+    cat("\n")} 
+  } else{
+    message("SUCCESS: Minimum spend met for all codes")
+}
+```
+
+-   Check the spend frequency for naw_cell_code=68 to make sure none of the
+    SP codes listed on the "SPEND \> \$0" tab have \$0 spend
+
+    ### I'm not sure what this is supposed to be doing. It looks like all of the Sp codes are listed on the Spend \> 0 tab. So what this would be checking is it the code CELL68 has a spend of 0 somewhere.
+
+```{r}
+open_seg_check_aug %>% 
+  filter(naw_cell_code == "CELL68") %>% 
+  group_by_summary_table("marketer_code", "account_spend")
+```
+
+-   Last set of tables is to see how many people are in error (don't worry
+    about these tables if both of above are checked.
+
+```{r}
+cc_freq_aug <- augment %>% 
+  freq_table("cell_code", "Cell Code Freqs Augmented Data")
+```
+
+-   This part of the code flags people for deletion for various reasons as
+    well as noting any other change. month to month as needed.
+
+-   The definition of the 'Flag_To' variable may change from month to month
+    in order to address various problems.
+
+-   CURRENT FLAG_TO DEFINITION
+
+    -   1 = Delete because Wrong Sp Code in Augment
+
+    -   2 = Delete because High Tenure in Augment
+
+    -   3 = Delete because Spend not \> \$0 in Augment
+
+-   **THERE WAS NO CODE IN SAS FOR CASE 1**
+
+-   All instances with flags will be exported to the
+    `Tenure_or_Spend_Flagged_{MONTH_SHORT}_{YEAR}.csv` in the
+    `Files_to_send` folder
+
+```{r FLAG DELETION}
+flag <- augment %>% 
+  mutate(
+    flag_to = case_when(
+      # Tenure Checks
+      # If anyone fails this, check with Caroline
+          # we think this should actually be 2 months*/
+      ((naw_cell_code == "CELL14") & (tenure_var <  5)) |
+      ((naw_cell_code == "CELL18") & (tenure_var > 15)) |
+      #((naw_cell_code == "CELL66") & (tenure_var <  3)) |
+      ((naw_cell_code == "CELL21") & (tenure_var > 15)) |
+      ((naw_cell_code == "CELL22") & (tenure_var > 15)) |
+      #((naw_cell_code == "CELL53") & (tenure_var > 15)) |
+      ((naw_cell_code == "CELL35") & (tenure_var >  4)) ~ 2, #|
+      #((naw_cell_code == "CELL67") & (tenure_var >  4)) ~ 2,
+      
+      # Spend Checks
+      ((naw_cell_code == "CELL21") & (account_spend <= 0)) ~3 #|
+      #((naw_cell_code == "CELL66") & (account_spend == 0)) |
+      #((naw_cell_code == "CELL67") & (account_spend == 0)) |
+      #((naw_cell_code == "CELL68") &
+         # (marketer_code %in% c('SP111','SP112',
+         #                       'SP113','SP114',
+         #                       'SP115','SP117',
+         #                       'SP118','SP123',
+         #                       'SP127','SP132',
+         #                       'SP136','SP145',
+         #                       'SP153','SP156')) &
+         # (account_spend == 0)) ~ 3
+    )
+  ) %>% arrange(flag_to)
+
+
+flags_only <- flag %>% filter(!is.na(flag_to)) %>% 
+  dplyr::select(gmpi_base_cust_id, naw_cell_code, tenure_var, 
+                      account_spend, marketer_code, setup_dt, flag_to) 
+
+flags_only %>% 
+  write_csv("../Files_to_send/Tenure_or_Spend_Flagged_{MONTH_SHORT}_{YEAR}.csv" %>%
+              f_string())
+
+n_flags <- nrow(flags_only)
+if (n_flags > 0){
+  warning("There are {n_flags} people flagged for deletion" %>% f_string())
+  cat("\n")
+  warning("Find specifics in file `Tenure_or_Spend_Flagged_{MONTH_SHORT}_{YEAR}.csv` in the Files_to_send folder" %>% f_string())
+  
+  flag_freqs <- flags_only %>% freq_table("Flag_to",
+                            "Flag Freqs")
+  
+  
+} else{
+  message("SUCCESS: No one is flagged for deletion")
+}
+```
+
+-   Assigns everyone to Selected = 0
+
+-   Brings the 4 subsets back together and assigns some extra variables
+
+-   Change the definition of subject_line according to this month's
+    instruction
+
+    -   (see instructions from Ops in part 1 row 6)
+
+```{r SUBJECT LINE}
+augment <- flag %>% 
+  mutate(selected = 0,
+         sp_code = str_extract(marketer_code, "[0-9]{3}") %>% 
+                            as.numeric(),
+                           # Extract drop code (i.e. 1 from DROP 01)
+                          drop_code = 1,
+                          mv_nps_ind = if_else(selected == 0, "NPS", "MV"),
+                          mr_in_n = if_else(mr_in == 'Y', 1, 2),
+                          subject_line = if_else(selected == 0, 6, 7))
+
+ncc_mv_nps <- augment %>% freq_table(c("naw_cell_code", "mv_nps_ind"),
+                          "naw cell code vs MV NPS IND Freqs")
+```
+
+```{r}
+sel_sbj_line <- augment %>%
+  freq_table(c("selected", "subject_line"), "Selected vs Subject Line Freqs")
+```
+
+```{r}
+# Store important sample datasets for weighting step
+save(augment, main, file=f_string("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))
+```

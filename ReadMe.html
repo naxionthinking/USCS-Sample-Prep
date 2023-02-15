@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Folder Strcture</title>
+        <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.css" rel="stylesheet" type="text/css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+        
+    </head>
+    <body class="vscode-body vscode-dark">
+        <h1 id="uscs-sample-prep-documentation">USCS Sample Prep Documentation</h1>
+<h1 id="folder-strcture">Folder Strcture</h1>
+<ul>
+<li><strong>Consumer BD</strong>
+<ul>
+<li><code>Sample_Prep_Helper_MONTH_YEAR.xlsx</code> - Contains important infomration on requested frenquecies of the Cell Codes and Marketer Codes, weighting categories, and expected ranges of tenure and account spend for augment cells. This information is used for checking if the data lines up with what is requested.</li>
+<li><strong>Scripts</strong> : Scripts for preparing samples
+<ul>
+<li><code>Config_and_Helpers.R</code> - Contains helper functions and file paths for the main scripts</li>
+<li><code>Scripts.Rproj</code> : The Rstudio project that should be used to run the scripts</li>
+<li><code>USCS_Prep_for_Weighting.html</code> - Output of the <code>USCS_Prep_for_Weighting.Rmd</code> script including information such as warnings on whether or not tests were passed and descriptive tables. This replaces the SAS log and lst files.</li>
+<li><code>USCS_Prep_for_Weighting.Rmd</code> Takes raw text data, cleans it up, verifies frequencies are correct, creates new variables. Prepares sample for weighting. (Replaces steps 1 and 2)</li>
+<li><code>USCS_Weighting.html</code> - Output of the <code>USCS_Weighting.Rmd</code> script including information such as warnings on whether or not tests were passed and descriptive tables. This replaces the SAS log and lst files.</li>
+<li><code>USCS_Weighting.Rmd</code> - Segments the data based on desired weights and creates new variables. Also contains validation checks. (Replaces step 3)</li>
+</ul>
+</li>
+<li><strong>Data</strong> : Where all intermediary storage files are outputted. These are not used again in the scripts after they are outputted except for <em>unweighted_samples.Rdata</em> but are stored just in case.
+<ul>
+<li><em>base_MONTH_YEAR.csv</em> - Cleaned version of BASE text file</li>
+<li><em>spend_MONTH_YEAR.csv</em> - Cleaned version of SPEND text file</li>
+<li><em>all_MONTH_YEAR.csv</em> - Merged Base and Spend datasets with additional variables</li>
+<li><em>augment_MONTH_YEAR.csv</em> - Unweighted augmented samples</li>
+<li><em>main_MONTH_YEAR.csv</em> - Unweighted main samples</li>
+<li><em>unweighted_samples_MONTH_YEAR.Rdata</em> - Contains augmented sample and main sample created by <code>USCS_Prep_for_Weighting.Rmd</code> for faster loading into <code>USCS_Weighting.Rmd</code>. This is just for convenience, the information is also in <em>main.csv</em> and <em>augment.csv</em></li>
+</ul>
+</li>
+<li><strong>Files_to_send</strong> : Contains datasets that should be sent to project managers.
+<ul>
+<li><em>Amex_760_MONTH_YEAR_All_Sample_Frame_Information_Qualtrics_DATE.csv</em> - Final weighted dataset</li>
+<li><em>Cell_Code_Freqs_MONTH_YEAR.csv</em> - Frequency table of Cell codes to be sent to the operations manager</li>
+<li><em>Main_Code_Freqs_MONTH_YEAR.csv</em> - Main sample marketer code frequencies table to be sent to the operations manager</li>
+<li><em>Tenure_or_Spend_Flagged_MONTH_YEAR.csv</em> - Contains observations with flags for deletion
+<ul>
+<li>1 = Delete because Wrong Sp Code in Augment</li>
+<li>2 = Delete because High Tenure in Augment</li>
+<li>3 = Delete because Spend not &gt; $0 in Augment</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<!-- | MARKETER_CODE | Freq  | pct   | cum_freq | cum_pct |
+| :---:         | :---: | :---: | :---:    | :---: |
+| SP101         | 39922 | 12.54 | 39922    | 12.54 |
+| SP103         | 4101  | 1.29  | 44023    | 13.83 | -->
+<h1 id="preparatory-steps-to-do-each-month">Preparatory Steps to do each Month</h1>
+<h2 id="creating-sample_prep_helper_month_yearxlsx">Creating <code>Sample_Prep_Helper_MONTH_YEAR.xlsx</code></h2>
+<p>The <code>Sample_Prep_Helper_MONTH_YEAR.xlsx</code> contains 3 sheets :</p>
+<ul>
+<li><em>Cell_Code_Freqs_Ranges</em> : Contains expected frequencies for each cell code and expected ranges for tenure and account spend for the augments</li>
+<li><em>Sp_Code_Freqs</em>: Contains expected frequencies for each marketer code</li>
+<li><em>Weighting_Segments</em>: Contains criteria for each weighting segment in terms of what their tenure, account spend, marketer code, and naw cell code are.</li>
+</ul>
+<p>It is probably easiest to copy this workbook from last month into the new month's folder, change the name to reflect the current month and year, and do the changes inside the sheets. Here's how to create the sheets</p>
+<ol>
+<li><em>Augment_Specs</em></li>
+</ol>
+<p>I'm not sure where this information originally comes from, but I have been extracting it from the <strong>Augment Sample Checks</strong> section of the <em>Main List</em> sheet of the <code>Sample Process Notes</code> excel document. Below is how I've been storing it in the <em>Augment_Specs</em> sheet.</p>
+<center>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">CELL_CODE</th>
+<th style="text-align:center">NAW_CELL_CODE</th>
+<th style="text-align:center">tenure_var_min</th>
+<th style="text-align:center">tenure_var_max</th>
+<th style="text-align:center">min_spend</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">CNCE14</td>
+<td style="text-align:center">CELL14</td>
+<td style="text-align:center">5</td>
+<td style="text-align:center"></td>
+<td style="text-align:center">Any Spend</td>
+</tr>
+<tr>
+<td style="text-align:center">CNPL18</td>
+<td style="text-align:center">CELL18</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">15</td>
+<td style="text-align:center">Any Spend</td>
+</tr>
+<tr>
+<td style="text-align:center">CNHH21</td>
+<td style="text-align:center">CELL21</td>
+<td style="text-align:center">3</td>
+<td style="text-align:center">15</td>
+<td style="text-align:center">&gt;$0</td>
+</tr>
+<tr>
+<td style="text-align:center">CNDP22</td>
+<td style="text-align:center">CELL22</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">15</td>
+<td style="text-align:center">Any Spend</td>
+</tr>
+<tr>
+<td style="text-align:center">CNPR35</td>
+<td style="text-align:center">CELL35</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">Any Spend</td>
+</tr>
+</tbody>
+</table>
+</center>
+<ol start="2">
+<li><em>Sp_Code_Freqs</em></li>
+</ol>
+<p>This is the easiest sheet to create. The information for this sheet is found in the <em>Global Criteria</em> sheet of the latest version of the excel file <code>MONTH_YEAR_MainFileBuildAugments_NA.xlsx</code> which can be found in the <code>requests</code> folder of the job drive for the current month. Then do the following:</p>
+<ul>
+<li>Copy and paste the table beginning with the headers <strong>SP Code</strong>, <strong>Card Name</strong>, <strong>Total Sample needed</strong> and down to the row right above the summed total.</li>
+<li>This is technically all that needs to be done as the script will remove the unnecesarry lines such as one that says &quot;CCSG Prop Lend&quot; in the Card Name as and has no information about Sp Code or Total Sample needed. But you can delete these lines in the excel sheet for clarity if desired. Here's an example of a few lines.</li>
+</ul>
+<center>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">SP Code</th>
+<th style="text-align:center">Card Name</th>
+<th style="text-align:center">Total Sample needed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">101</td>
+<td style="text-align:center">CCSG: Platinum</td>
+<td style="text-align:center">39922</td>
+</tr>
+<tr>
+<td style="text-align:center">149</td>
+<td style="text-align:center">CCSG: Classic Gold</td>
+<td style="text-align:center">8703</td>
+</tr>
+<tr>
+<td style="text-align:center">148</td>
+<td style="text-align:center">CCSG: Traditional Gold With Rewards</td>
+<td style="text-align:center">3728</td>
+</tr>
+<tr>
+<td style="text-align:center">103</td>
+<td style="text-align:center">CCSG: Traditional Gold No Rewards</td>
+<td style="text-align:center">4101</td>
+</tr>
+</tbody>
+</table>
+</center>
+<ol start="3">
+<li><em>Weighting_Segments</em></li>
+</ol>
+<p>The weighting segments sheet corresponds to the sheet <em>YEAR-USCS Targets QUARTER</em> in the latest <code>Weighting Target Summary for OPEN and USCS</code> excel file.</p>
+<ul>
+<li>Copy columns E-K into the <em>Weighting_Segments</em> sheet. These correspond to columns named <strong>SP_Code</strong>, <strong>Tenure</strong>, <strong>Spend</strong> <strong>X</strong>, and <strong>Weighting_Segment</strong>.
+<ul>
+<li>Column <strong>X</strong> is not importance, hence the lack of name.</li>
+</ul>
+</li>
+<li>The scripts that perform the weighting DO NOT INFER ANYTHING. All required information must be present in the <em>Weighting_Segments</em> sheet prior to running the scripts. This means that extra information not contained in the <code>Weighting Target Summary</code> file must be included manually. I've only stumbled across two instances that require manual addition so far.
+<ul>
+<li>Some Weighting Segments (i.e.,'ZX132ET' or 'ZX132HTHS') are only for a certain NAW_CELL_CODE (i.e, &quot;CELL66&quot;). This information is not included in the <code>Weighting Target Summary</code> file and thus would not be included in the <em>Weighting_Segments</em> sheet. This should manually be inputted into the column called <strong>NAW_CELL_CODE</strong>.</li>
+<li>Also all SP Codes for a given segment need to be specified in the <strong>SP_Code</strong> column. If it is not specified, specify them manually.
+<ul>
+<li>For example. The Weighting Segment &quot;Z01&quot; is labelled under <strong>SP_Code</strong> as &quot;Z01: CENTURION&quot; and does not say it is only for SP 135. Thus, it should be changed to something like &quot;Z01: SP 135; CENTURION&quot;. Multiple SP Codes can be specified for the same segment too. The script will extract all 3 digit numbers and treat them as SP Codes</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>Additional checks for this sheet:</p>
+<ul>
+<li>If there is no minimum or maximum tenure or account spend, the cell should be left blank or should contain &quot;n/a&quot;.
+<ul>
+<li>For example, a new segment was created for marketer code 158 for all values. The <code>Weighting Target Summary</code> file listed the tenure range as &quot;Any Tenure&quot; and spend range as &quot;Any Spend&quot;. These were then manually changed to n/a in the <em>Weighting_Segments</em> sheet. They could also be deleted and left as blank cells.</li>
+</ul>
+</li>
+<li>I also tend to delete blank rows or rows calculating totals. The script can automatically remove these, but it's cleaner to have them removed in the excel file itself.</li>
+</ul>
+<p>Here are a few examples of the different cases; most of which are straight copy paste from the <code>Weighting Target Summary</code> file.</p>
+<center>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">SP_Code</th>
+<th style="text-align:center">Tenure</th>
+<th style="text-align:center">Spend</th>
+<th style="text-align:center">X</th>
+<th style="text-align:center">Weighting_Segment</th>
+<th style="text-align:center">NAW_CELL_CODE</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">Early Tenure: SP 101</td>
+<td style="text-align:center">&lt;5 mos</td>
+<td style="text-align:center">n/a</td>
+<td style="text-align:center">98242</td>
+<td style="text-align:center">ET11</td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center">Early Tenure (Other Prop Lend) = 111, 112, 114, 115, 118</td>
+<td style="text-align:center">&lt;5 mos</td>
+<td style="text-align:center">n/a</td>
+<td style="text-align:center">20</td>
+<td style="text-align:center">ET35</td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center">SP101HTHS: SP 101; High tenure; High spend</td>
+<td style="text-align:center">73 mos+</td>
+<td style="text-align:center">$35,000+</td>
+<td style="text-align:center">649235</td>
+<td style="text-align:center">SP101HTHS</td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center">Z01: SP 135; CENTURION</td>
+<td style="text-align:center">n/a</td>
+<td style="text-align:center">n/a</td>
+<td style="text-align:center">19424</td>
+<td style="text-align:center">Z01</td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center">Early Tenure: SP 132</td>
+<td style="text-align:center">&lt;5 mos</td>
+<td style="text-align:center">n/a</td>
+<td style="text-align:center">97931</td>
+<td style="text-align:center">ZX132ET</td>
+<td style="text-align:center">CELL66</td>
+</tr>
+<tr>
+<td style="text-align:center">SP132HTHS: SP 132; High tenure; High spend</td>
+<td style="text-align:center">73 mos+</td>
+<td style="text-align:center">$2,500+</td>
+<td style="text-align:center">846443</td>
+<td style="text-align:center">ZX132HTHS</td>
+<td style="text-align:center">CELL66</td>
+</tr>
+</tbody>
+</table>
+</center>
+<h2 id="changes-inside-of-scripts">Changes inside of Scripts</h2>
+<p>The Major changes to be done each month are for the current date, and file paths. These are located in <code>Config_and_Helpers.R</code> script. All variables to update are all the top of the script. The path variables are either absolute or relative paths to the files necessary for the script.</p>
+<blockquote>
+<p>Ideally, I'd love if there was consistent naming and usage of these files and it could all be loaded in dynamically based on the YEAR and MONTH, but that doesn't seem to be the case since some files are from months ago and some have small changes to their names. That's why some of them look a little wonky at the moment. I've dynamicized parts of them, but it's not consistent so it looks a little messy.</p>
+</blockquote>
+<p>Theoretically only the lines highlighted in red should need to be changed, and not all need to be updated each month.</p>
+<center>
+<img src="https://raw.githubusercontent.com/Beck-DeYoung-NA/USCS-Sample-Prep/main/Config_What_To_Edit.png">
+</center>
+<p>Other changes to the scripts are dependent on the needs of the given month. Hopefully once we identify what is commonly changed, we can dynamically account for those in configuration rather than changing what is hard coded. But obviously, right now, things need to be changed in the code itself.</p>
+<h3 id="possible-locations-for-changes"><em>Possible locations for changes</em></h3>
+<p>Find these by clicking on the tab right above the Console that probably says # USCS Read Step 1. Then find the named chunks that are specified below.</p>
+<center>
+<img src="https://raw.githubusercontent.com/Beck-DeYoung-NA/USCS-Sample-Prep/main/Chunk%20Selection.png">
+</center>
+<p><code>USCS_Prep_for_Weighting.Rmd</code></p>
+<ol>
+<li><strong>Flag for Deleting Cases</strong>: Chunk  <code>FLAG DELETION</code></li>
+<li><strong>Changing Subject Line Definition for Augment</strong>: Chunk <code>SUBJECT LINE</code></li>
+</ol>
+<p><code>USCS_Weighting.Rmd</code></p>
+<ol start="3">
+<li><strong>New Variable Creation/Adjustment</strong>: Chunk <code>NEW VARIABLES</code></li>
+</ol>
+<h1 id="creating-the-ouput-and-running-the-scripts">Creating the Ouput and Running the Scripts</h1>
+<h2 id="running-the-scripts">Running the Scripts</h2>
+<ol>
+<li>First run through <code>USCS_Prep_for_Weighting.Rmd</code>.
+<ul>
+<li>I would suggest running the script a few chunks at a time when first getting the data instead of running the entire script at once. The markdown files generate the output in real time and do it in line. So if you run a certain chunk (hitting the green play button), it will produce the output below the cell. The variables will also all be stored and generated in the environment tab on the right, which makes for easy debugging and problem identification. Everything is chronological and self-contained, so no back and forth between excel and R.</li>
+<li>Importantly, any chunk can be run at any time, but will not work properly if the variables required for the chunk have not been created yet. So if you want to run Chunk 10, make sure to run Chunks 1-9 first. But once you have run Chunks 1-10, you can rerun any of them and regenerate the output.</li>
+<li>Once you've made it through the entire script without worrying warnings (i.e., all problems have been identified and remedied or noted), then you will knit it to an html document. Click on the arrow next to Knit and select &quot;Knit to HTML&quot;. This will run the entire script in the background and generate the output as an HTML. If there were any errors or warnings in the code that prevent it from fully running, then the output will not be generated. So those need to be dealt with first.</li>
+</ul>
+</li>
+</ol>
+<center>
+<img src="https://raw.githubusercontent.com/Beck-DeYoung-NA/USCS-Sample-Prep/main/Knit.png">
+</center>
+<ol>
+<li>Then run through <code>USCS_Weighting.Rmd</code> the same way.</li>
+</ol>
+<h2 id="output">Output</h2>
+<p>Currently, the script is outputted an HTML file that contains all the generated tables, warnings if checks are not passed, and success messages if the checks are passed.</p>
+<blockquote>
+<p>The warnings indicate a check is not met. These will be printouts with &quot;Warning:&quot; before them. If a check is passed, a message will be printed with &quot;SUCCESS:&quot; before it. If any warnings are printed, figure out why and report if the warning says to.</p>
+</blockquote>
+<p>The scripts also output csv files that need to be emailed to project managers. See the <code>Folder Structure</code> section to see what is outputted. The HTML file does not include any of the code, but it does currently include the instructions of how to use the script, which does look a little odd when the code is not included. Knowing who the audience is for the output can help me tailor the information that is provided.</p>
+<p>I can also add more descriptive statements for the outputs, such as</p>
+<blockquote>
+<p>&quot;Currently checking if the observed frequencies of each cell code match the requested frequencies:&quot;</p>
+</blockquote>
+<blockquote>
+<p>  &quot;SUCCESS: Observed and requested frequencies match for the cell codes&quot;</p>
+</blockquote>
+<h3 id="becks-questions"><strong>Beck's Questions</strong></h3>
+<center>
+<p><code>USCS_Prep_for_Weighting</code></p>
+</center>
+<p><strong>Line 79</strong>: Is any cell code that does not start with &quot;CCSG&quot; considered an augment? I currently have an extra condition saying that augments start with &quot;C&quot; but not &quot;CCSG&quot;. If it is the case that every non-CCSG code is an augment, then we can update lines 99-100.</p>
+<p><strong>Lines 144-149</strong> : This code checks for missing marketer codes, but is unnecessary because we already filter out blank marketer codes before. I'm happy to remove this check if you guys approve.</p>
+<p><strong>Lines 369-377</strong> : In the SAS code and excel file, there is a check for the DMA frequency. I'm not sure what is happening in this check, so I was never able to code it up in R.</p>
+<p><strong>Lines 711-728</strong> : This checks if the cell code frequencies for the augment cells are the same as before segmented the data. This seems unnecessary because these numbers are generated from the same dataset just with one having SP138 and 139 removed. Is this the problem this is checking for?</p>
+
+        <script async src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
+        
+    </body>
+    </html>

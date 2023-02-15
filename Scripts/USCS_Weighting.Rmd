@@ -1,0 +1,721 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+```{r Load in Packages, message=F, warning=F, echo=F}
+if (!require("tidyverse")) install.packages("tidyverse")
+if (!require("readxl")) install.packages("readxl")
+if (!require("stringi")) install.packages("stringi")
+if (!require("lubridate")) install.packages("lubridate")
+
+source('Config_and_Helpers.R')
+
+options(scipen = 9999,# Remove scientific notation
+        dplyr.summarise.inform = FALSE)
+
+knitr::opts_chunk$set(results = "asis",
+                      echo=F)
+```
+
+## STEP 3
+
+-   Writes that Augment Sample File
+
+-   Writes the 'All Sample' file,
+
+-   Starting in January 2013, we only had to send augment sample to
+    Research Now,
+
+-   In April 2013, we had to start sending something to Cheetah Mail
+    again because CELL15 gets a 3:1 allocation,
+
+-   In 2015 Cheetah Mail file started to get sent to Salesforce
+
+
+```{r}
+# Load in the generated data sets from the first step (main and augment)
+load(f_string("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))
+```
+
+
+```{r}
+main <- main %>% mutate(setx = 1)
+augment <- augment %>% mutate(setx = 2)
+
+et_tab <- augment %>% 
+  count(marketer_code, sp_code) %>%
+  spread(marketer_code, n, fill = 0) %>% 
+  make_nice_table("Augmented Sample Sp Code vs Marketer Code Freqs")
+  
+```
+
+```{r message=F}
+combined <- full_join(main, augment) %>% 
+  mutate(cell_num = if_else(setx %in% c(2,3), 
+                            str_extract(naw_cell_code, "[0-9]{2}"), NA_character_),
+         creative = "")
+```
+
+```{r}
+cell_no_freq <- combined %>% freq_table("cell_num", "Cell Number Frequency")
+
+######## FLAG TO FREQ
+message("There are {sum(is.na(combined$raw_fico))} missing values for raw_fico" %>% 
+          f_string())
+```
+
+
+
+### WEIGHTING
+
+#### Dynamically establish weighting conditions
+
+- This chunk takes in the information from the target weight summary
+- It automatically extracts the conditions for the weighting segments
+- An example is 
+  - If sp_code = 130 & tenure_var $\geq$ 241 & account_spend $\geq$ 1500 THEN weighting_segment='SP103HTHS'
+```{r WEIGHTING CONDITIONS}
+# Load in weighting conditions
+weights <- read_excel(SAMPLE_PREP_PATH,
+                      sheet = "Weighting_Segments",
+                      na = c("", "n/a")) %>% 
+  # Drop empty rows
+  drop_na(sp_code)
+
+weights <- weights %>% 
+  # We first need to extract the sp codes
+  # either the name of the segment has the designated codes
+  # Or they are separately provided in another column SP_Code2
+  
+  # if there is an sp code in the helper column, we use it
+  mutate(
+    sp_code = if_else(str_detect(sp_code, "[0-9]{3}"),
+                      str_extract_all(sp_code, " [0-9]{3}"),
+                      as.list(NA_character_))) %>% 
+  
+  # Create all the conditions from the information in the excel
+  mutate(
+        # The tenure variable either looks like
+            # NUM days+
+            # NUM mos+
+            # tenure < NUM mos
+            # NUM1 to <NUM2 mos
+            # Num1 to NUM2 mos
+        # So we need to account for all cases
+         tenure_var = if_else(str_detect(tenure, "days"), 
+                              # If tjos os tje days case. then divide by 30 and round up
+                              (str_extract(tenure, "[0-9]+") %>% 
+                                 as.numeric() / 30) %>% ceiling() %>% as.character(),
+                              # If not, extract all numbers (NUM or NUM1 and NUM2)
+                              map_chr(str_extract_all(tenure, "[0-9]+"), ~ str_c(.x, collapse=","))),
+         
+         # The spend variable only has one number but can be of the form
+            # $NUM+
+            # <$NUM
+         account_spend = parse_number(spend), # This extracts just the number
+         
+         # Here we determine if there was a < or + indicating whether 
+          # we are looking at values less than or greater than the number
+         across(c("tenure", "spend"), 
+                ~case_when(str_detect(., "\\+") ~ ">=",
+                           str_detect(., "\\<") ~ "<",
+                           T ~ NA_character_), 
+                .names = "{col}_sign"),
+         
+         # Now we create the tenure condition
+         # This looks like 
+            # NUM1 <= tenure_var  & tenure_var >= NUM2
+            # NUM < tenure_var ETC
+         tenure_cond = case_when(
+           is.na(tenure) ~ NA_character_,
+           # in this case, there is NUM1 and NUM2
+           str_detect(tenure_var, ",") ~ paste(get_first_num(tenure_var),
+                                               " <= tenure_var & tenure_var ",
+                                               # This is where we determine if 
+                                               # the condition is NUM1 to <NUM2 or NUM1 to NUM2
+                                               if_else(is.na(tenure_sign),
+                                                       "<=",
+                                                       tenure_sign),
+                                               get_last_num(tenure_var)),
+           # This case is one NUM and we just incorporate the sign we extracted
+           T ~ paste("tenure_var", tenure_sign, tenure_var)),
+         
+         # Here we create the spend condition which just uses the extracted sign
+         spend_cond = if_else(
+           is.na(spend), NA_character_,
+           paste("account_spend", spend_sign, account_spend)),
+          
+         # get the sp code condition
+           sp_cond = if_else(
+             is.na(sp_code),
+             NA_character_,
+             # This just creates the conditions when there are multiple codes
+             sapply(sp_code, function(x) paste0("sp_code %in% c(", paste(x, collapse = ","), ")"))),
+         
+         # Augmented cell condition
+         naw_cond = if_else(
+           is.na(naw_cell_code),
+           NA_character_,
+           paste0("naw_cell_code ==", "'", naw_cell_code, "'")),
+         
+         # we need to properly order the conditions so ones that overlap work properly
+         ordering = case_when(
+                      str_detect(weighting_segment, "^TX")  ~ 1,
+                      str_detect(weighting_segment, "^ZX")  ~ 2,
+                      str_detect(weighting_segment, "^AUG") ~ 3,
+                      str_detect(weighting_segment, "^ET")  ~ 4,
+                      !str_detect(weighting_segment, "SP")  ~ 5,
+                      T ~ 6
+                      )
+  ) %>% 
+  # Create the full condition
+  unite(col = 'full_cond', sp_cond, tenure_cond, spend_cond, naw_cond, 
+        sep = " & ", na.rm=T) %>%
+  mutate(full_cond = glue("{full_cond} ~ '{weighting_segment}'")) %>% 
+  arrange(ordering) %>% 
+  dplyr::select(weighting_segment, 
+                sp_code, 
+                naw_cell_code, 
+                tenure, spend, full_cond)
+```
+
+ - Apply the weighting conditions and generate the segments
+ 
+```{r}
+weighted_sample <- combined %>% 
+  mutate(weighting_segment = case_when(!!!rlang::parse_exprs(weights$full_cond)))
+```
+
+- Verify splits were done correctly
+
+```{r}
+# Mean of account_spend by weighting_segment
+weight_tab <- weighted_sample %>% 
+  group_by(weighting_segment) %>%
+  summarize(n = n(),
+            mean_spend = mean(account_spend),
+            sd_spend = sd(account_spend),
+            min_spend = min(account_spend),
+            max_spend = max(account_spend),
+            mean_tenure = mean(tenure_var),
+            sd_tenure = sd(tenure_var),
+            min_tenure = min(tenure_var),
+            max_tenure = max(tenure_var)) %>% 
+  mutate_if(is.numeric, round, digits=2) %>% 
+  make_nice_table("Weighting Segments Summary Table")
+
+# Cross-tabulation of naw_cell_code, weighting_segment, and spcode
+weights_ncc_sp_code <- weighted_sample %>%
+  freq_table(c('naw_cell_code', 'weighting_segment', 'sp_code'), 
+             "Cross-tab of naw_cell_code, weighting_segment, and sp_code")
+```
+
+#### Create New Variables
+
+```{r NEW VARIABLES}
+weighted_sample <- weighted_sample %>%
+  mutate(
+    sv_spend = case_when(
+      spend == "A" ~ 1,
+      spend == "B" ~ 2,
+      spend == "C" ~ 3,
+      spend == "D" ~ 4,
+      spend == "E" ~ 5,
+      spend == "F" ~ 6,
+      spend == "G" ~ 7,
+      spend == "H" ~ 8,
+      spend == "I" ~ 9,
+      spend == "J" ~ 10),
+    
+    bf_fico_range = ifelse(fico_range == "", "",
+                           str_extract(fico_range, "[0-9]+")),
+    
+    bf_st_exp_enroll_in = case_when(
+      st_exp_enroll_in == "C" ~ "1",
+      st_exp_enroll_in == "E" ~ "2",
+      st_exp_enroll_in == "H" ~ "3",
+      st_exp_enroll_in == "I" ~ "4",
+      st_exp_enroll_in == "N" ~ "5",
+      st_exp_enroll_in == "O" ~ "6",
+      st_exp_enroll_in == "R" ~ "7",
+      st_exp_enroll_in == "S" ~ "8",
+      st_exp_enroll_in == "X" ~ "9",
+      st_exp_enroll_in == "P" ~ "10",
+      st_exp_enroll_in == "" ~ "",
+      TRUE ~ "REF"),
+    
+    
+    bf_expo_enroll_in = case_when(
+      expo_enroll_in == "C" ~ "1",
+      expo_enroll_in == "E" ~ "2",
+      expo_enroll_in == "H" ~ "3",
+      expo_enroll_in == "I" ~ "4",
+      expo_enroll_in == "N" ~ "5",
+      expo_enroll_in == "O" ~ "6",
+      expo_enroll_in == "R" ~ "7",
+      expo_enroll_in == "S" ~ "8",
+      expo_enroll_in == "X" ~ "9",
+      expo_enroll_in == "P" ~ "10",
+      expo_enroll_in == "" ~ ""),
+    
+    bf_myca_flg = case_when(
+      myca_flag == "" ~ "",
+      myca_flag == "Y" ~ "1",
+      myca_flag == "N" ~ "2",
+      T ~ "REF"),
+    
+    bf_mr_in = case_when(mr_in == "" ~ "",
+                         mr_in == "Y" ~ "1",
+                         mr_in == "N" ~ "2",
+                         T ~ "REF"),
+    
+    bf_purch_apr_rt = case_when(
+      purch_apr_rt > 0 ~ purch_apr_rt %>% round(2) %>% as.character(),
+      purch_apr_rt == -1 ~ "",
+      T ~ "REF"),
+    
+    # /**********CHECK TENURE*************/
+    cv_cs_et_type = case_when(
+      #Ops asked that SP code 158, new in Jan 2023, be called early tenure even though tenure_var values exceed 4 see email from Hunter 1/3/23*/
+      marketer_code == "SP158" ~ 1, 
+      tenure_var >= 2 & tenure_var <= 4  ~ 1,
+      tenure_var >= 5 & tenure_var <= 15 ~ 2,
+      TRUE ~ 3),
+    
+    
+    #/*N_User_id=length(Personalization1)-1, userid=SUBSTR(Personalization1,2,N_User_id), #*/*per Brent 1/9/2018,
+    survey_type = "USCS",
+    #*Need to be exact,
+    country = "United States",
+    #*Need to be exact,
+    country_code = 90,
+    language = "EN",
+    #*Need to be exact-"Language",
+    
+    #*CV_PORTFOLIO,
+    cv_portfolio = case_when(
+      marketer_code %in%  c('SP101',
+                            'SP149',
+                            'SP148',
+                            'SP103',
+                            'SP105',
+                            'SP106',
+                            'SP150',
+                            'SP151',
+                            'SP108',
+                            'SP110',
+                            'SP117',
+                            'SP120',
+                            'SP135'
+                          ) ~ 1,
+      
+      marketer_code %in%  c('SP111',
+                            'SP112',
+                            'SP113',
+                            'SP114',
+                            'SP115',
+                            'SP118',
+                            'SP132',
+                            'SP133',
+                            'SP145',
+                            'SP146',
+                            'SP156'
+                          ) ~ 2,
+      
+      marketer_code %in%  c('SP123',
+                            'SP124',
+                            'SP125',
+                            'SP126',
+                            'SP127',
+                            'SP129',
+                            'SP130',
+                            'SP136',
+                            'SP137',
+                            'SP138',
+                            'SP139',
+                            'SP142',
+                            'SP153',
+                            'SP154',
+                            'SP155',
+                            'SP157',
+                            'SP158'
+                          ) ~ 3),
+    
+    #/*USE SMART_REV for Weighting Segment because CV_MARKET_SIZE wasn't working;
+
+	  #/* cyear and Month_2dig will be used to append the Weight_segment and CV_interview_data variables.
+	  #   note that cyear and cmonth are initizlized in step1*/
+    
+         month_2dig = formatC(MONTH_NO, width = 2, flag = "0"),
+         cv_interview_date = paste0(YEAR, month_2dig),
+         weighting_segment_nu = paste0(weighting_segment, cv_interview_date),
+    
+         best_dma = ifelse(best_dma_cd == 0 |
+                            best_dma_cd == 999 |
+                            is.na(best_dma_cd),
+                          "REF",
+                          as.character(best_dma_cd)),
+         
+         #card anniversary date
+         card_anniv_dt = if_else(card_anniv_dt == "0001-01-01",
+                                 NA_character_, card_anniv_dt),
+         anniv = as_date(card_anniv_dt, format = "%Y-%m-%d"),
+         bf_card_anniv_year = year(anniv),
+         bf_card_anniv_month = month(anniv),
+         
+         # Card setup date
+         setup = as_date(setup_dt, format = "%Y-%m-%d"),
+         bf_setup_year = year(setup),
+         bf_setup_month = month(setup),
+         bf_setup_day = day(setup),
+         
+         # Prog Enter Date
+         enrolls = as_date(mr_init_enroll_dt, format = "%Y-%m-%d"),
+         bf_mr_init_enroll_year = year(enrolls),
+         bf_mr_init_enroll_month = month(enrolls),
+         bf_mr_init_enroll_day = day(enrolls),
+         
+         	#*AGE;
+         dInterviewDate = YEAR + (MONTH_NO/12),
+         dYOB = floor(dInterviewDate-raw_age),
+         year_of_birth = ifelse(is.na(raw_age) | 
+                                  dYOB < 1850 | 
+                                  dYOB > (year(Sys.Date()) - 17), 
+                                "", 
+                                as.character(dYOB)),
+    
+         generation2 = case_when(year_of_birth == "" ~ "",
+                                 dYOB < 1946 ~ "Silent: 1945 and prior",
+                                 dYOB < 1965 ~ "Baby Boomers: 1946 – 1964",
+                                 dYOB < 1980 ~ "Generation X: 1965 – 1979",
+                                 dYOB < 1989 ~ "Older Millennials: 1980 – 1988",
+                                 dYOB < 1997 ~ "Younger Millennials: 1989 – 1996",
+                                 dYOB >= 1997 ~ "Generation Z: 1997 and later"),
+    
+    bdl_fico_bucket = case_when(is.na(raw_fico) | raw_fico == -1 ~ "",
+                                     raw_fico < 650 ~ "1",
+                                     raw_fico < 720 ~ "2",
+                                     raw_fico >= 720 ~ "3"),
+    
+    cv_amex_has_fee = case_when(marketer_code %in% c("SP101", "SP103", "SP105", 
+                                                     "SP106", "SP108", "SP110", 
+                                                     "SP120", "SP124", "SP125", 
+                                                     "SP126", "SP129", "SP130", 
+                                                     "SP133", "SP135", "SP137", 
+                                                     "SP138", "SP139", "SP142", 
+                                                     "SP146", "SP148", "SP149", 
+                                                     "SP150", "SP151", "SP154", 
+                                                     "SP155", "SP157", "SP158") ~ "1",
+                                
+                                marketer_code %in% c("SP111", "SP112", "SP113", 
+                                                     "SP114", "SP115", "SP117", 
+                                                     "SP118", "SP123", "SP127", 
+                                                     "SP132", "SP136", "SP145", 
+                                                     "SP153", "SP156") ~ "2",
+                                TRUE ~ "REF"),
+    
+    account_spend = ifelse(is.na(account_spend), 0, account_spend),
+    
+    cv_mr_category = case_when(mr_tier_prog_cd == "PR" ~ 1,
+                               mr_tier_prog_cd == "MR" ~ 2,
+                               mr_tier_prog_cd == "LF" ~ 3,
+                               TRUE ~ NA_real_),
+    
+    cv_augment_sample = ifelse(naw_cell_code %in% c("CELL18", "CELL21", "CELL22", 
+                                                   "CELL14", "CELL35", "CELL53",
+                                                   "CELL54", "CELL55", "CELL56",
+                                                   "CELL57", "CELL58", "CELL59",
+                                                   "CELL60", "CELL61", "CELL62", 
+                                                   "CELL66"),
+                               1,
+                               2),
+    account_share_of_wallet = ifelse(size_of_wallet != 0, 
+                                     account_spend / size_of_wallet, 
+                                     NA),  
+    card_name =case_when(marketer_code == 'SP101' ~ 'Platinum',
+                         marketer_code == 'SP103' ~ 'Gold Charge No Rewards',
+                         marketer_code == 'SP105' ~ 'Gold',
+                         marketer_code == 'SP106' ~ 'Senior Gold',
+                         marketer_code == 'SP108' ~ 'Green Charge No Rewards',
+                         marketer_code == 'SP110' ~ 'Senior Green',
+                         marketer_code == 'SP111' ~ 'Platinum, Platinum Preferred, Gold Optima',
+                         marketer_code == 'SP112' ~ 'Standard and Classic Optima',
+                         marketer_code == 'SP113' ~ 'Blue',
+                         marketer_code == 'SP114' ~ 'Blue Cash',
+                         marketer_code == 'SP115' ~ 'BlueSky',
+                         marketer_code == 'SP117' ~ 'One',
+                         marketer_code == 'SP118' ~ 'Clear',
+                         marketer_code == 'SP119' ~ 'Cash Rebate',
+                         marketer_code == 'SP120' ~ 'Zync',
+                         marketer_code == 'SP123' ~ 'Hilton Honors',
+                         marketer_code == 'SP124' ~ 'Hilton Honors Surpass',
+                         marketer_code == 'SP125' ~ 'Delta Gold',
+                         marketer_code == 'SP126' ~ 'Delta Platinum',
+                         marketer_code == 'SP127' ~ 'Delta Blue',
+                         marketer_code == 'SP128' ~ 'Delta Classic & SkyPoints',
+                         marketer_code == 'SP129' ~ 'Delta Reserve',
+                         marketer_code == 'SP130' ~ 'Marriott Bonvoy',
+                         marketer_code == 'SP132' ~ 'Blue Cash Everyday',
+                         marketer_code == 'SP133' ~ 'Blue Cash Preferred',
+                         marketer_code == 'SP134' ~ 'Blue Sky Preferred',
+                         marketer_code == 'SP135' ~ 'Centurion',
+                         marketer_code == 'SP136' ~ 'Morgan Stanley Credit',
+                         marketer_code == 'SP137' ~ 'Morgan Stanley Platinum',
+                         marketer_code == 'SP138' ~ 'Ameriprise Gold',
+                         marketer_code == 'SP139' ~ 'Ameriprise Platinum',
+                         marketer_code == 'SP140' ~ 'Fidelity Platinum',
+                         marketer_code == 'SP141' ~ 'Fidelity Gold',
+                         marketer_code == 'SP142' ~ 'Goldman Sachs Platinum',
+                         marketer_code == 'SP143' ~ 'Mercedes-Benz Credit',
+                         marketer_code == 'SP144' ~ 'Mercedes-Benz Platinum',
+                         marketer_code == 'SP145' ~ 'Amex EveryDay',
+                         marketer_code == 'SP146' ~ 'Amex EveryDay Preferred',
+                         marketer_code == 'SP148' ~ 'Traditional Gold with Rewards',
+                         marketer_code == 'SP149' ~ 'Classic Gold',
+                         marketer_code == 'SP150' ~ 'Green',
+                         marketer_code == 'SP151' ~ 'Traditional Green with Rewards',
+                         marketer_code == 'SP152' ~ 'Plenti',
+                         marketer_code == 'SP153' ~ 'Schwab Investor',
+                         marketer_code == 'SP154' ~ 'Schwab Platinum',
+                         marketer_code == 'SP155' ~ 'Hilton Honors Aspire',
+                         marketer_code == 'SP156' ~ 'Cash Magnet',
+                         marketer_code == 'SP157' ~ 'Marriott Bonvoy Brilliant',
+                         marketer_code == 'SP158' ~ 'Marriott Bonvoy Bevy')
+    )
+```
+
+### CHECKS FOR NEW VARIABLES
+
+- Most of these need to be hand checked since they were created by the same formulas that would be used to check their correctness
+
+```{r}
+fico <- table(weighted_sample$fico_range, weighted_sample$bf_fico_range, useNA = "ifany") %>% make_nice_table("FICO Range vs BF FICO Range")
+enroll <- table(weighted_sample$st_exp_enroll_in, weighted_sample$bf_st_exp_enroll_in, useNA = "ifany") %>% make_nice_table("st_exp_enroll_in vs bf_st_exp_enroll_in")
+myca_flag <- table(weighted_sample$myca_flag, weighted_sample$bf_myca_flg, useNA = "ifany") %>% make_nice_table("myca_flag vs bf_myca_flg")
+mr_in <- table(weighted_sample$mr_in, weighted_sample$bf_mr_in, useNA = "ifany") %>% make_nice_table("mr_in vs BF_mr_in")
+
+
+cv_et <- weighted_sample %>% group_by_summary_table("cv_cs_et_type", "tenure_var") # *1 = tenure < 5, 2=tenure 5-15, 3=tenure > 15;
+
+no_cv_cs_et <- weighted_sample %>% filter(is.na(cv_cs_et_type)) 
+
+if (nrow(no_cv_cs_et) > 0) warning("Missing CV CS ET Type")
+
+
+port_mc <- table(weighted_sample$marketer_code, weighted_sample$cv_portfolio, useNA = "ifany") %>% make_nice_table("cv_portfolio vs marketer_code")
+fee_mc <- table(weighted_sample$marketer_code, weighted_sample$cv_amex_has_fee, useNA = "ifany") %>% make_nice_table("cv_amex_has_fee vs marketer_code")
+
+if (sum(is.na(weighted_sample$account_number)) > 0) warning("Missing account spend found")
+
+tier_cat <- table(weighted_sample$mr_tier_prog_cd, weighted_sample$cv_mr_category, useNA = "ifany") %>% 
+  make_nice_table("mr_tier_prog_cd vs cv_mr_category")
+aug_naw <- table(weighted_sample$cv_augment_sample, weighted_sample$naw_cell_code, useNA = "ifany") %>% 
+  make_nice_table("cv_augment_sample vs naw_cell_code")
+
+
+if(weighted_sample %>% 
+   filter(replace_na(best_dma_cd,"") %in% c('','999','0')) %>% 
+   nrow() > 0) warning("DMA_CD contains missing val, blank, 0 or 999")
+
+if(weighted_sample %>% 
+   filter(replace_na(best_dma,"") %in% c('','999','0')) %>% 
+   nrow() > 0) warning("DMA contains missing val, blank, 0 or 999")
+
+yobs <- weighted_sample %>% mutate(age = ceiling(raw_age)) %>% 
+  distinct(dInterviewDate, dYOB, age, year_of_birth) %>%
+  arrange(age) %>% 
+  make_nice_table("Checking year of birth calculations") # Are ages correct
+
+gens <- weighted_sample %>% distinct(year_of_birth, generation2) %>% 
+  arrange(year_of_birth) %>% 
+  make_nice_table("Checking Generation calculations")
+
+fico <- weighted_sample %>% distinct(raw_fico, bdl_fico_bucket) %>% 
+  arrange(bdl_fico_bucket, raw_fico) %>% 
+  make_nice_table("Checking FICO Bucket")
+```
+
+
+```{r}
+# Missing Full Name
+miss_name <- weighted_sample %>% 
+  filter(is.na(first_nm) & is.na(last_nm)) %>% 
+  dplyr::select(customer_id,first_nm, last_nm)
+
+if (nrow(miss_name) > 0){
+  warning('Fully missing names found')
+  print(miss_name)
+} else{
+  message("SUCCESS: No Fulling missing names")
+}
+```
+- Fills in the blank names with "Valued Card Member" because First and Last name are now included in the AllSample file
+```{r}
+weighted_sample <- weighted_sample %>% 
+  mutate(name_tmp = is.na(first_nm) | is.na(last_nm) | nchar(first_nm) == 10,
+    first_nm = if_else(name_tmp,
+                         "Valued Card",
+                                first_nm),
+         last_nm = if_else(name_tmp,
+                          "Member",
+                          last_nm))
+```
+
+```{r message=F}
+# *Read in Subject Line Code Info from file which Brent sent on 1.15.20.
+# This file will be provided by Brent each _____;
+# *removed duplicate entries of LNU and MV5 and saved csv file with date of 1125;
+# *There are now 1758 entries in the Sunjectline insert csv file received on 06.30.2020;
+
+subject_line_insert_info <- read_csv(SUBJECT_LINE_PATH) %>% 
+  set_names(c('ia_id', 'sv_subject_line_insert'))
+```
+
+- check if there are records that did not match with the Subject line insert file;
+
+```{r}
+# * check if there are records that did not match with the Subject line insert file;
+weighted_sample <- weighted_sample %>% 
+  left_join(subject_line_insert_info, by = "ia_id")
+
+miss_inserts <- weighted_sample[is.na(weighted_sample$sv_subject_line_insert),]
+if(nrow(miss_inserts) > 0){
+  warning("Missing subject line inserts")
+  print(miss_inserts %>% dplyr::select(customer_id, sv_subject_line_insert))
+} else{
+  
+  message("SUCCESS: No missing subject line inserts")
+}
+```
+
+```{r}
+ia_subline_freq <- weighted_sample %>% 
+  freq_table(c("ia_id", "sv_subject_line_insert"), 
+             "Freq table IA ID vs Subject Line insert")
+```
+
+```{r message = F}
+# Create new variable and replace empty values with "American Express Card"
+weighted_sample <- weighted_sample %>% 
+  mutate(sv_subject_line_insert = if_else(sv_subject_line_insert == "", 
+                                          "American Express Card", sv_subject_line_insert))
+
+# Read in Card Art URLs and sort data
+card_art_info <- read_csv(CARD_ART_PATH) %>% 
+  dplyr::select(marketer_code = `SP Code`,
+                sv_card_art = SV_CARD_ART)
+
+# Merge data
+weighted_sample <- weighted_sample %>% left_join(card_art_info)
+
+sp_sv_card_freq <- weighted_sample %>% 
+  freq_table(c("marketer_code","sv_card_art"), "SP Code vs SV Card Freq Table")
+```
+
+```{r}
+sp135 <- weighted_sample %>% filter(marketer_code == 'SP135')
+other <- weighted_sample %>% filter(marketer_code != 'SP135')
+```
+
+```{r message=F}
+# Reading the file
+centurion_tiers <- read_csv(CENTURION_TIER_PATH) %>% 
+  set_names(c('gmpi_base_cust_id', 'CCSG_CENTURION_TIER')) %>%
+  distinct(gmpi_base_cust_id, .keep_all = TRUE)
+
+# Merging the dataframes
+final <- sp135 %>% 
+  left_join(centurion_tiers) %>% 
+  full_join(other)
+final <- final %>% set_names(str_to_upper(names(final))) %>% 
+  dplyr::select(BF_GMPI_BASE_CUST_ID = GMPI_BASE_CUST_ID,
+                FIRST_NM,
+                LAST_NM,
+                BF_CITY_NM = CITY_NM,
+                BF_STATE_TX = STATE_TX,
+                BF_US_ZIP = US_ZIP,
+                BF_LAST5 = LAST5,
+                BF_IA_ID = IA_ID,
+                BF_FMLY_DS_TX = FMLY_DS_TX,
+                BF_CARD_ROLLUP_DS_TX = CARD_ROLLUP_DS_TX,
+                BF_CONS_FRIENDLY_DS_TX = CONS_FRIENDLY_DS_TX,
+                BF_SETUP_DT = SETUP_DT,
+                BF_BEST_DMA_CD = BEST_DMA,
+                BF_MAIL_ID = MAIL_ID,
+                BF_CELL_CODE = CELL_CODE,
+                BF_MARKETER_CODE = MARKETER_CODE,
+                BF_MYCA_FLG,
+                BF_MR_IN,
+                BF_ACCOUNT_SPEND = ACCOUNT_SPEND,
+                BF_SIZE_OF_WALLET = SIZE_OF_WALLET,
+                BF_SHARE_OF_WALLET_AMEX = SHARE_OF_WALLET_AMEX,
+                BF_CARD_ANNIV_DT = CARD_ANNIV_DT,
+                BF_AGE_RANGE = AGE_RANGE,
+                BF_CUSTOMER_SPEND = CUSTOMER_SPEND,
+                BF_FICO_RANGE,
+                BF_ACTIVE_SUPP_CT = ACTIVE_SUPP_CT,
+                BF_ST_EXP_ENROLL_IN,
+                BF_EXPO_ENROLL_IN,
+                BF_MR_TIER_PROG_CD = MR_TIER_PROG_CD,
+                BF_MR_INIT_ENROLL_DT = MR_INIT_ENROLL_DT,
+                BF_AVLBL_PNTS = AVLBL_PNTS,
+                BF_ACCT_TRANS_PNTS_NO = ACCT_TRANS_PNTS_NO,
+                BF_TOT_RVLV_INT_AM = TOT_RVLV_INT_AM,
+                BF_RVLV_MTHS_NO = RVLV_MTHS_NO,
+                BF_TOT_LOC_INT_AM = TOT_LOC_INT_AM,
+                BF_TOT_LOC_INT_MTH_NO = TOT_LOC_INT_MTH_NO,
+                BF_TOT_LOC_AM = TOT_LOC_AM,
+                SV_SP_CODE = SP_CODE,
+                SV_AUGMENT_CELL = CELL_NUM,
+                SV_STUDY_OPENEND = MV_NPS_IND,
+                SV_MR_IN = MR_IN_N,
+                SV_TENURE_QUANT = TENURE_VAR,
+                BF_RDM_NET_12M_CT = RDM_NET_12M_CT,
+                BF_LINE_OF_CREDIT_AM = LINE_OF_CREDIT_AM,
+                BF_PURCH_APR_RT,
+                SV_SUBJECT_LINE = SUBJECT_LINE,
+                SV_PRODUCT_TENURE = T_ADD,
+                WV_WEIGHTING_SEGMENT = WEIGHTING_SEGMENT_NU,
+                SV_SPEND,
+                SURVEY_TYPE,
+                COUNTRY,
+                COUNTRY_CODE,
+                LANGUAGE,
+                CV_PORTFOLIO,
+                CV_INTERVIEW_DATE,
+                CV_AMEX_HAS_FEE,
+                CV_MR_CATEGORY,
+                CV_CS_ET_TYPE,
+                CCSG_CENTURION_TIER,
+                CV_BF_ACCOUNT_SHARE_OF_WALLET = ACCOUNT_SHARE_OF_WALLET,
+                BF_CARD_ANNIV_YEAR,
+                BF_CARD_ANNIV_MONTH,
+                BF_MR_INIT_ENROLL_YEAR,
+                BF_MR_INIT_ENROLL_MONTH,
+                BF_MR_INIT_ENROLL_DAY,
+                BF_SETUP_YEAR,
+                BF_SETUP_MONTH,
+                BF_SETUP_DAY,
+                CARD_NAME,
+                BDL_AGE = RAW_AGE,
+                BDL_FICO_SCORE = RAW_FICO,
+                YEAR_OF_BIRTH,
+                CV_Generation_New = GENERATION2,
+                BDL_FICO_BUCKET,
+                SV_SUBJECT_LINE_INSERT,
+                SV_CARD_ART,
+                CUST_ACQ_CODE)
+```
+
+
+```{r}
+final %>% write_csv("../Files_to_send/Amex_760_{MONTH}_{YEAR}_All_Sample_Frame_Information_Qualtrics_{Sys.Date()}.csv" %>% f_string(), na ="")
+
+varhandle::rm.all.but(keep=c('final'))
+```
+
+

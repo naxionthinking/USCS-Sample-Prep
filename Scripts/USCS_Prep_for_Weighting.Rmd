@@ -58,20 +58,20 @@ knitr::opts_chunk$set(results = "asis",
 
 ```{r Load in base and spend dataframes}
 all_base <- load_base() %>%
-  # Blank out unnecessary personal information
-  mutate(nm_pfx_tx  = "",
-         nm_suff_tx  = "",
-         best_addr_line1_tx = "",
-         best_addr_line2_tx = "",
-         sal_tx = "",
-         home_phone_ln_no = "",
-         new_smart_rev = as.numeric(new_smart_rev_char)) %>%
+  # Remove unnecessary personal information
+  select(-c(nm_pfx_tx,
+            nm_suff_tx,
+            best_addr_line1_tx,
+            best_addr_line2_tx,
+            sal_tx,
+            home_phone_ln_no)) %>% 
+  mutate(new_smart_rev = as.numeric(new_smart_rev_char)) %>%
   filter(!cell_code %in% c("","CNGR54")) %>% #*From Ops email: (please take out all counts for Augment 54);
   filter(marketer_code != "") #*from ops email 9 28 22: #take out the three people missing marketer_code,
 
 all_spend <- load_spend() %>%
   mutate(gmpi_base_cust_id = customer_id) %>%
-  filter(substring(customer_id, 1, 1) != " ") # Remove blank space at start of ID
+  filter(substring(customer_id, 1, 1) != " ") # Remove records with blank space at start of ID
 ```
 
 ### Cell Code Checking
@@ -369,17 +369,25 @@ if (nrow(pers_dupes) > 0){
 
 ### DMA Frequency
 
-12) Run ReadStep1.sas from line 295 (BestDMA Frequency) to line 300 (output
-    to 'DMA Check') Frequency data gets written into 'DMA Check' columns F
-    & G. Verify that everything got written okay. If all DMAs are
-    acceptable, 'DMA Check'!E215 should say "All Good" and 'Main List'!F37
-    should say "Okay" If they say something different, resolve the problem
-    or note the exception
+- Make sure all DMA Codes are valid using the `DMA_Checks` sheet of the sample prep excel file.
 
-    **I'M NOT WHATS HAPPENING HERE TO BE ABLE TO CODE IT UP**
+```{r message=F}
+# Load in valid dmas
+valid_dmas <- read_excel(SAMPLE_PREP_PATH,
+                         sheet = "Valid_DMA_Codes") %>% 
+  pull(Valid_DMA)
+```
 
-```{r}
+```{r }
+# identify invalid dma's if any and get frequencies
+invalid_dmas <- all %>% filter(!best_dma_cd %in% valid_dmas) %>% group_by(best_dma_cd) %>% summarize(n = n()) 
 
+if (nrow(invalid_dmas) > 0){
+  warning("There are invlaid DMA Codes in the file. Here are the codes and number of occurrences:")
+  invalid_dmas %>% make_nice_table("Invalid DMA Code Frequencies") 
+} else{
+  message("SUCCESS: No invalid DMAs found in file")
+}
 ```
 
 ### Frequency Tables for Spend and Tenure

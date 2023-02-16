@@ -2,6 +2,7 @@ if (!require("pacman")) install.packages("pacman")
 
 # Loads in necessary packages, and installs them if you don't have them installed
 pacman::p_load("tidyverse",
+               "glue",
                "readxl",
                "kableExtra",
                "knitr")
@@ -26,7 +27,7 @@ RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}_{str_pad(MONTH_NO,2,
 BASE_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A3.BASE.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt' %>% f_string()
 SPEND_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A4.SPEND.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt' %>% f_string()
 
-FILE_LOOKUPS <- "../../../File Lookups" %>% f_string()
+FILE_LOOKUPS <- "../../../File Lookups"
 OPEN_SEG_PATH <-       "{FILE_LOOKUPS}/Managed_2022_segment_SAT 06232022.csv"  %>% f_string()
 SUBJECT_LINE_PATH <-   "{FILE_LOOKUPS}/MarketVoice - Card Lookup20230124_ForAnalytics.csv"  %>% f_string()
 CENTURION_TIER_PATH <- "{FILE_LOOKUPS}/760_CENTURION_TIER_CVs.csv" %>% f_string()

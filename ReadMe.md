@@ -1,9 +1,81 @@
 # USCS Sample Prep Documentation
 
+## Setting up the Directory
+### Cloning the Master Branch
+
+1.  Open a command prompt or terminal. It will look something like
+
+<center><img src="https://raw.githubusercontent.com/Beck-DeYoung-NA/USCS-Sample-Prep/main/Readme_Icons/Config_What_To_Edit.png"/></center>
+
+
+2.  Navigate to the directory where you want to store the cloned repository.
+    - If it's February 2023, then you'd run the following in the command prompt
+```
+cd \\sys_op\methods\Amex.549\Sample\2023\2023-02\
+```
+3.  Run the following command to clone the `master` branch:
+    - This will create a clone of the template repository in the directory you specified above
+```
+git clone https://github.com/Beck-DeYoung-NA/USCS-Sample-Prep.git
+```
+4.  Wait for the cloning process to finish.
+5. Navigate into the new directory
+
+```
+cd USCS-Sample-Prep
+```
+
+### Creating a new branch
+
+We now create a new branch, which just means that you can store the changes made the scripts and files this month without changing anything done in previous months or to the template.  
+
+6. Run the following command to create a new branch for the current month:
+
+```
+git checkout -b USCS\_<Month>\_<Year>
+```
+
+Replace `<Month>` and `<Year>` with the current month and year, respectively. For example, if you were creating a branch for February 2023, you would run:
+```
+git checkout -b USCS_Feb_2023
+```
+
+7.  Wait for the new branch to be created.
+8.  Now you can make any edits you want to the new files
+
+### Updating the branch
+To then save any updates to github, follow the next instructions.
+
+1.  Open a command prompt or terminal.
+2.  Navigate to the directory where you cloned the repository. 
+    - If you have been making edits in the folder in Rstudio or VS Code, you most likely are already in the correct directory in the terminal. So you can open the terminal straight from Rstudio or VS code. Just verify you are in the correct folder before you run any commands. You'll get an error if not because "git" commands won't work in a non-repository folder, so if that happens, just renavigate to the desired folder.
+
+3.  Run the following commands to stage and commit your changes:
+
+```
+git add . 
+git commit -m "Describe your changes here"
+```
+
+4.  Run the following command to push your changes to the remote repository:
+
+```
+git push --set-upstream origin USCS\_<Month>\_<Year>
+```
+
+Replace `<Month>` and `<Year>` with the current month and year, respectively because this is the name of the branch you created above.
+
+5.  Wait for the changes to be pushed to the remote repository.
+6. With the upstream repository established, to push to it in the future, you only have to do
+
+```
+git push
+```
+
 # Folder Strcture
 
 -   **Consumer BD**
-    -   `Sample_Prep_Helper_MONTH_YEAR.xlsx` - Contains important infomration on requested frenquecies of the Cell Codes and Marketer Codes, weighting categories, and expected ranges of tenure and account spend for augment cells. This information is used for checking if the data lines up with what is requested.
+    -   `Sample_Prep_Helper_MONTH_YEAR.xlsx` - Contains important infomration on requested frenquecies of the Cell Codes and Marketer Codes, weighting categories, valid DMA codes, and expected ranges of tenure and account spend for augment cells. This information is used for checking if the data lines up with what is requested.
     -   **Scripts** : Scripts for preparing samples
         -   `Config_and_Helpers.R` - Contains helper functions and file paths for the main scripts
         -   `Scripts.Rproj` : The Rstudio project that should be used to run the scripts
@@ -27,20 +99,15 @@
             -   2 = Delete because High Tenure in Augment
             -   3 = Delete because Spend not \> \$0 in Augment
 
-```{=html}
-<!-- | MARKETER_CODE | Freq  | pct   | cum_freq | cum_pct |
-| :---:         | :---: | :---: | :---:    | :---: |
-| SP101         | 39922 | 12.54 | 39922    | 12.54 |
-| SP103         | 4101  | 1.29  | 44023    | 13.83 | -->
-```
 # Preparatory Steps to do each Month
 
 ## Creating `Sample_Prep_Helper_MONTH_YEAR.xlsx`
 
-The `Sample_Prep_Helper_MONTH_YEAR.xlsx` contains 3 sheets :
+The `Sample_Prep_Helper_MONTH_YEAR.xlsx` contains 4 sheets :
 
 -   *Cell_Code_Freqs_Ranges* : Contains expected frequencies for each cell code and expected ranges for tenure and account spend for the augments
 -   *Sp_Code_Freqs*: Contains expected frequencies for each marketer code
+-   *Valid_DMA_Codes*: Contains valid DMA codes from Nielsen
 -   *Weighting_Segments*: Contains criteria for each weighting segment in terms of what their tenure, account spend, marketer code, and naw cell code are.
 
 It is probably easiest to copy this workbook from last month into the new month's folder, change the name to reflect the current month and year, and do the changes inside the sheets. Here's how to create the sheets
@@ -79,7 +146,11 @@ This is the easiest sheet to create. The information for this sheet is found in 
 
 </center>
 
-3.  *Weighting_Segments*
+3. *Valid_DMA_Codes*
+
+This sheet can be kept the same unless Nielsen has updated the DMA codes.
+
+4.  *Weighting_Segments*
 
 The weighting segments sheet corresponds to the sheet *YEAR-USCS Targets QUARTER* in the latest `Weighting Target Summary for OPEN and USCS` excel file.
 
@@ -101,7 +172,7 @@ Here are a few examples of the different cases; most of which are straight copy 
 <center>
 
 |                         SP_Code                          | Tenure  |   Spend   |   X    | Weighting_Segment | NAW_CELL_CODE |
-|:--------------------------------------------------------:|:-------:|:---------:|:------:|:-----------------:|:-------------:|
+|:-----------------------:|:--------:|:--------:|:--------:|:--------:|:--------:|
 |                   Early Tenure: SP 101                   | \<5 mos |    n/a    | 98242  |       ET11        |               |
 | Early Tenure (Other Prop Lend) = 111, 112, 114, 115, 118 | \<5 mos |    n/a    |   20   |       ET35        |               |
 |        SP101HTHS: SP 101; High tenure; High spend        | 73 mos+ | \$35,000+ | 649235 |     SP101HTHS     |               |

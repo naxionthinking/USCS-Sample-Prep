@@ -73,7 +73,7 @@ message("There are {sum(is.na(combined$raw_fico))} missing values for raw_fico" 
 
 
 
-### WEIGHTING
+### AssIGNING WEIGHTING SEGMENTS
 
 #### Dynamically establish weighting conditions
 
@@ -110,7 +110,7 @@ weights <- weights %>%
             # Num1 to NUM2 mos
         # So we need to account for all cases
          tenure_var = if_else(str_detect(tenure, "days"), 
-                              # If tjos os tje days case. then divide by 30 and round up
+                              # If this is the days case. then divide by 30 and round up
                               (str_extract(tenure, "[0-9]+") %>% 
                                  as.numeric() / 30) %>% ceiling() %>% as.character(),
                               # If not, extract all numbers (NUM or NUM1 and NUM2)

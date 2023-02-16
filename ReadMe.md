@@ -5,11 +5,11 @@
 
 1.  Open a command prompt or terminal. It will look something like
 
-<center><img src="https://raw.githubusercontent.com/Beck-DeYoung-NA/USCS-Sample-Prep/main/Readme_Icons/Config_What_To_Edit.png"/></center>
+    <center><img src="./Readme_Icons/Command_Prompt.png"/></center>
 
 
 2.  Navigate to the directory where you want to store the cloned repository.
-    - If it's February 2023, then you'd run the following in the command prompt
+    - If it's February 2023, then you'd run the following in the command prompt. "cd" means change directory, so you just specify the path of the folder you want to hold the USCS Sample prep information.
 ```
 cd \\sys_op\methods\Amex.549\Sample\2023\2023-02\
 ```
@@ -32,7 +32,7 @@ We now create a new branch, which just means that you can store the changes made
 6. Run the following command to create a new branch for the current month:
 
 ```
-git checkout -b USCS\_<Month>\_<Year>
+git checkout -b USCS_<Month>_<Year>
 ```
 
 Replace `<Month>` and `<Year>` with the current month and year, respectively. For example, if you were creating a branch for February 2023, you would run:
@@ -48,7 +48,9 @@ To then save any updates to github, follow the next instructions.
 
 1.  Open a command prompt or terminal.
 2.  Navigate to the directory where you cloned the repository. 
-    - If you have been making edits in the folder in Rstudio or VS Code, you most likely are already in the correct directory in the terminal. So you can open the terminal straight from Rstudio or VS code. Just verify you are in the correct folder before you run any commands. You'll get an error if not because "git" commands won't work in a non-repository folder, so if that happens, just renavigate to the desired folder.
+    - If you have been making edits in the Rstudio project, you most likely are already in the correct directory in the terminal. So you can open the terminal straight from Rstudio. Just verify you are in the correct folder before you run any commands. You'll get an error if not because "git" commands won't work in a non-repository folder, so if that happens, just renavigate to the desired folder. 
+
+    <center><img src="./Readme_Icons/RStudio_terminal.png"/></center>
 
 3.  Run the following commands to stage and commit your changes:
 
@@ -60,7 +62,7 @@ git commit -m "Describe your changes here"
 4.  Run the following command to push your changes to the remote repository:
 
 ```
-git push --set-upstream origin USCS\_<Month>\_<Year>
+git push --set-upstream origin USCS_<Month>_<Year>
 ```
 
 Replace `<Month>` and `<Year>` with the current month and year, respectively because this is the name of the branch you created above.
@@ -71,6 +73,8 @@ Replace `<Month>` and `<Year>` with the current month and year, respectively bec
 ```
 git push
 ```
+
+As a note, Rstudio has version control integrated into it with a user interface. I'm not the biggest fan of it and I prefer to use the terminal, but it can be used instead.
 
 # Folder Strcture
 
@@ -188,7 +192,7 @@ The Major changes to be done each month are for the current date, and file paths
 
 Theoretically only the lines highlighted in red should need to be changed, and not all need to be updated each month.
 
-<center><img src="https://raw.githubusercontent.com/Beck-DeYoung-NA/USCS-Sample-Prep/main/Readme_Icons/Config_What_To_Edit.png"/></center>
+<center><img src="./Readme_Icons/Config_What_To_Edit.png"/></center>
 
 Other changes to the scripts are dependent on the needs of the given month. Hopefully once we identify what is commonly changed, we can dynamically account for those in configuration rather than changing what is hard coded. But obviously, right now, things need to be changed in the code itself.
 
@@ -196,7 +200,7 @@ Other changes to the scripts are dependent on the needs of the given month. Hope
 
 Find these by clicking on the tab right above the Console that probably says \# USCS Read Step 1. Then find the named chunks that are specified below.
 
-<center><img src="https://raw.githubusercontent.com/Beck-DeYoung-NA/USCS-Sample-Prep/main/Readme_Icons/Chunk%20Selection.png"/></center>
+<center><img src="./Readme_Icons/Chunk%20Selection.png"/></center>
 
 `USCS_Prep_for_Weighting.Rmd` 1. **Flag for Deleting Cases**: Chunk `FLAG DELETION` 2. **Changing Subject Line Definition for Augment**: Chunk `SUBJECT LINE`
 
@@ -213,7 +217,7 @@ Find these by clicking on the tab right above the Console that probably says \# 
     -   Importantly, any chunk can be run at any time, but will not work properly if the variables required for the chunk have not been created yet. So if you want to run Chunk 10, make sure to run Chunks 1-9 first. But once you have run Chunks 1-10, you can rerun any of them and regenerate the output.
     -   Once you've made it through the entire script without worrying warnings (i.e., all problems have been identified and remedied or noted), then you will knit it to an html document. Click on the arrow next to Knit and select "Knit to HTML". This will run the entire script in the background and generate the output as an HTML. If there were any errors or warnings in the code that prevent it from fully running, then the output will not be generated. So those need to be dealt with first.
 
-<center><img src="https://raw.githubusercontent.com/Beck-DeYoung-NA/USCS-Sample-Prep/main/Readme_Icons/Knit.png"/></center>
+<center><img src="./Readme_Icons/Knit.png"/></center>
 
 1.  Then run through `USCS_Weighting.Rmd` the same way.
 

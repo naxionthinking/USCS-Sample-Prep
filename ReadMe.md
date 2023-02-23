@@ -59,6 +59,14 @@ git add .
 git commit -m "Describe your changes here"
 ```
 
+The "." means add all changes. If you want to add changes to certain files then you list them after git add like
+
+```
+git add file1 file2 file3
+```
+There's a lot of variation is this as well. There's ways to add only certain file types, just add changes and not new files, etc. Look here for more information: [Git add](https://github.com/git-guides/git-add).
+
+
 4.  Run the following command to push your changes to the remote repository:
 
 ```
@@ -75,6 +83,11 @@ git push
 ```
 
 As a note, Rstudio has version control integrated into it with a user interface. I'm not the biggest fan of it and I prefer to use the terminal, but it can be used instead.
+
+## Important Notes
+
+ - Once the repository has been cloned and the branch established, anyone can go to that folder and utilize its git capabilities to make changes to the branch. So do not reclone the repository in the same location if someone else has already done it.
+ - In general with git, multiple people can make edits on different machines and sync them. But because we all have access to the same drives, we do not need to worry about merging changes since only one person will be using the files at a time and we all have immediate access to those changes. There are no need for commands such as "git fetch" or "git pull".
 
 # Folder Strcture
 

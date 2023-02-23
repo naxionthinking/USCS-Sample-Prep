@@ -120,6 +120,8 @@ As a note, Rstudio has version control integrated into it with a user interface.
 
 ## Creating `Sample_Prep_Helper_MONTH_YEAR.xlsx`
 
+After pulling from Github, there is a file called `Sample_Prep_Helper_Template.xlsx` in your repository. Rename this to `Sample_Prep_Helper_MONTH_YEAR.xlsx`. 
+
 The `Sample_Prep_Helper_MONTH_YEAR.xlsx` contains 4 sheets :
 
 -   *Cell_Code_Freqs_Ranges* : Contains expected frequencies for each cell code and expected ranges for tenure and account spend for the augments

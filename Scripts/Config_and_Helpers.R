@@ -20,6 +20,20 @@ MONTH <- month.name[MONTH_NO]
 MONTH_SHORT <- month.abb[MONTH_NO] %>% str_to_upper() 
 
 # FILE PATHS TO UPDATE
+# SAMPLE_PREP_PATH <- "../Sample_Prep_Helper_{MONTH_SHORT}_{YEAR}.xlsx" %>% f_string()
+# 
+# RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}_{str_pad(MONTH_NO,2,pad="0")}/raw' %>% f_string()
+# 
+# BASE_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A3.BASE.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt' %>% f_string()
+# SPEND_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A4.SPEND.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt' %>% f_string()
+# 
+# FILE_LOOKUPS <- "../../../File Lookups"
+# OPEN_SEG_PATH <-       "{FILE_LOOKUPS}/Managed_2022_segment_SAT 06232022.csv"  %>% f_string()
+# SUBJECT_LINE_PATH <-   "{FILE_LOOKUPS}/MarketVoice - Card Lookup20230124_ForAnalytics.csv"  %>% f_string()
+# CENTURION_TIER_PATH <- "{FILE_LOOKUPS}/760_CENTURION_TIER_CVs.csv" %>% f_string()
+# CARD_ART_PATH <-       "{FILE_LOOKUPS}/Card Art URLs 20230124.csv" %>% f_string()
+
+# TESTING ABSOLUTE PATHS FOR JANUARY
 SAMPLE_PREP_PATH <- "../Sample_Prep_Helper_{MONTH_SHORT}_{YEAR}.xlsx" %>% f_string()
 
 RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}_{str_pad(MONTH_NO,2,pad="0")}/raw' %>% f_string()
@@ -27,13 +41,11 @@ RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}_{str_pad(MONTH_NO,2,
 BASE_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A3.BASE.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt' %>% f_string()
 SPEND_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A4.SPEND.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt' %>% f_string()
 
-FILE_LOOKUPS <- "../../../File Lookups"
+FILE_LOOKUPS <- "L:/Amex.549/Sample/2023/File Lookups" %>% f_string()
 OPEN_SEG_PATH <-       "{FILE_LOOKUPS}/Managed_2022_segment_SAT 06232022.csv"  %>% f_string()
 SUBJECT_LINE_PATH <-   "{FILE_LOOKUPS}/MarketVoice - Card Lookup20230124_ForAnalytics.csv"  %>% f_string()
 CENTURION_TIER_PATH <- "{FILE_LOOKUPS}/760_CENTURION_TIER_CVs.csv" %>% f_string()
 CARD_ART_PATH <-       "{FILE_LOOKUPS}/Card Art URLs 20230124.csv" %>% f_string()
-
-
 
 # Check that a string doesn't match any non-letter
 is_letters_only <- function(x) !grepl("[^A-Za-z]", x)
@@ -56,7 +68,7 @@ make_nice_table <- function(tab, caption){
     kable_styling(bootstrap_options = "striped",
                   full_width = F, position = "center") %>% print()
   
-  tab %>% return()
+  tab %>% return() # Return the original table to avoid printing NULL in output
 }
 
 # Function to generate a frequency table
@@ -71,7 +83,7 @@ freq_table <- function(df, var, caption=NULL){
   
   if (!is.null(caption)) make_nice_table(tab, caption)
   
-  tab
+  tab %>% return()
 }
 
 

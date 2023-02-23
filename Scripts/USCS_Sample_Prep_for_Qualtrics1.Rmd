@@ -1,5 +1,5 @@
 ---
-title: "USCS Read Step 1"
+title: "USCS Prep Sample for Qualtrics 1"
 output:
   html_document:
     df_print: paged
@@ -37,7 +37,7 @@ properly before running this script
 
 ### Dependencies
 
-```{r Load in Packages, message=F, warning=F, echo=F}
+```{r Load in Packages, message=FALSE, warning=FALSE, echo=FALSE}
 if (!require("pacman")) install.packages("pacman")
 
 # Loads in necessary packages, and installs them if you don't have them installed
@@ -46,34 +46,42 @@ pacman::p_load("tidyverse",
                "stringi",
                "varhandle")
 
-source('Config_and_Helpers.R')
+# Load in configuration file variables and functions
+source('Config_and_Helpers.R') 
 
-options(scipen = 9999, # Remove scientific notation
-        dplyr.summarise.inform = FALSE) 
+options(scipen = 99999, # Remove scientific notation
+        dplyr.summarise.inform = FALSE) # Remove summarize messages
 
-knitr::opts_chunk$set(results = "asis",
-                      echo=F)
+knitr::opts_chunk$set(results = "asis", # Prints 
+                      echo=FALSE) # Don't show any code chunks in the output
 ```
 
 ### Data Loading
 
 ```{r Load in base and spend dataframes}
-all_base <- load_base() %>%
-  # Remove unnecessary personal information
-  select(-c(nm_pfx_tx,
-            nm_suff_tx,
-            best_addr_line1_tx,
-            best_addr_line2_tx,
-            sal_tx,
-            home_phone_ln_no)) %>% 
-  mutate(new_smart_rev = as.numeric(new_smart_rev_char)) %>%
-  filter(!cell_code %in% c("","CNGR54")) %>% #*From Ops email: (please take out all counts for Augment 54);
-  filter(marketer_code != "") #*from ops email 9 28 22: #take out the three people missing marketer_code,
-
-all_spend <- load_spend() %>%
-  mutate(gmpi_base_cust_id = customer_id) %>%
-  filter(substring(customer_id, 1, 1) != " ") # Remove records with blank space at start of ID
+all_base <- load_base() 
+all_spend <- load_spend()
 ```
+
+```{r Filtering base and spend}
+# Change these monthly based on OPS instructions
+# Comment out filters that do not need to be applied
+
+all_base <- all_base %>% 
+  # *Change new_smart_rev to numeric
+  #mutate(new_smart_rev = as.numeric(new_smart_rev_char)) %>%
+  
+  #*From Ops email: (please take out all counts for Augment 54);
+  # filter(!cell_code %in% c("","CNGR54")) %>% 
+  #*from ops email 9 28 22: #take out the three people missing marketer_code
+  filter(marketer_code != "") 
+
+all_spend <- all_spend %>%
+  rename(gmpi_base_cust_id = customer_id) %>% 
+  # Remove records with blank space at start of ID
+  filter(substring(gmpi_base_cust_id, 1, 1) != " ") 
+```
+
 
 ### Cell Code Checking
 
@@ -81,7 +89,7 @@ all_spend <- load_spend() %>%
     sample requested
 -   Verify no missing cell codes
 
-```{r Check Cell Codes, message=F}
+```{r Check Cell Codes, message=FALSE}
 # Create a frequency table of each cell code
 cell_code_freq <- all_base %>% 
   freq_table("cell_code", caption = "Cell Code Frequencies")
@@ -95,7 +103,7 @@ aug_survey_ccs <- cell_code_freq %>%
   filter(!str_starts(cell_code, "CCSG") & str_starts(cell_code, "C"))
 ```
 
-```{r message=F}
+```{r message=FALSE}
 # Load in the expected frequencies from the helper file
 req_sp_codes <- read_excel(SAMPLE_PREP_PATH,
                            sheet = "Sp_Code_Freqs") %>% 
@@ -341,7 +349,7 @@ all_spend %>% write_csv("../Data/all_spend_{MONTH_SHORT}_{YEAR}.csv" %>% f_strin
 
 ### Checking for Duplicate Keys in Merged Data frame
 
-```{r message=F}
+```{r message=FALSE}
 # First checking distribution of sample by Augment/MAIN;
 naw_freq_table <- all %>%
   freq_table(c("naw_type", "naw_cell_code"),
@@ -370,9 +378,10 @@ if (nrow(pers_dupes) > 0){
 
 ### DMA Frequency
 
-- Make sure all DMA Codes are valid using the `DMA_Checks` sheet of the sample prep excel file.
+-   Make sure all DMA Codes are valid using the `DMA_Checks` sheet of the
+    sample prep excel file.
 
-```{r message=F}
+```{r message=FALSE}
 # Load in valid dmas
 valid_dmas <- read_excel(SAMPLE_PREP_PATH,
                          sheet = "Valid_DMA_Codes") %>% 
@@ -478,7 +487,7 @@ main_sp_codes_spend_ct <- table(main_sp_codes_spend$marketer_code,
   make_nice_table("SP Codes vs Spending Category (None should have Category A)")
 ```
 
-```{r }
+```{r}
 tab <- main_sp_codes_spend_ct %>% as.data.frame() %>% 
   set_names(c("sp_code","spend", "Freq"))
 
@@ -590,7 +599,7 @@ if (length(check_a2) == nrow(check_a)){ # Everything should be in check2
 
     -   If someone appears here, note and resolve/explain the issue
 
-```{r message=F}
+```{r message=FALSE}
 # Load in new segment data
 open_seg <- read_csv(OPEN_SEG_PATH) %>% 
   rename(gmpi_base_cust_id = cust_xref_id) %>% 
@@ -610,7 +619,8 @@ cid_open <- open_seg %>%
   dplyr::select(customer_id_open_seg = customer_id) %>% 
   summary() %>% make_nice_table("Customer ID Open Segment Descriptive Stats")
 
-open_seg_freq <- open_seg %>% freq_table("OPEN_MANAGED_SEGMENT", caption="Open Managed Segment Freqs")
+open_seg_freq <- open_seg %>% 
+  freq_table("OPEN_MANAGED_SEGMENT", caption="Open Managed Segment Freqs")
 
 open_seg_dupes <- open_seg[duplicated(open_seg$customer_id),]
 
@@ -638,30 +648,18 @@ if (nrow(open_seg_check) > 0){
   message("SUCCESS: No main file customers appear in the new segment")
 }
 ```
-
--   Runs a frequency of Tenure by each SP code
-
-    -   Collapses the counts for Tenure of 5+;
-
 -   Generates a count for Early Tenure and Non-Early Tenure
 
-```{r results = "hide"}
-et_tab <- main %>% 
+```{r }
+et_tab2 <- main %>% 
   count(marketer_code, tenure_cat) %>%
   spread(tenure_cat, n, fill = 0) %>%
-  make_nice_table("Tenure Frequencies by Marketer Code")
-
-```
-
-```{r }
-et_tab <- et_tab %>% 
   # Create new variables for the split of early and non-early tenure counts
   mutate(et = `1`,
          non_et = rowSums(et_tab[3:11])) %>% 
-  dplyr::select(marketer_code, et, non_et)
-
-"Count of Early Tenure: {sum(et_tab$et)}" %>% f_string() %>% print()
-"Count of Non Early Tenure: {sum(et_tab$non_et)}" %>% f_string() %>% print()
+  dplyr::select(marketer_code, et, non_et) %>% 
+  janitor::adorn_totals('row') %>% 
+  make_nice_table("Early vs Non-Early Tenure by SP Code")
 ```
 
 ### Diagnostic Tests
@@ -723,7 +721,7 @@ cell_code_naw_sp_ct <- augment %>%
 Check the Marketer Codes Frequency for each Augment to make sure they align
 with the previous results (originally specs in 'Main list'!D48:D54)
 
-```{r include=F}
+```{r}
 
 cc_aug_freq <- cell_code_freq %>%
   filter(str_detect(naw_cell_code, "Augment")) %>% 
@@ -769,7 +767,7 @@ if (nrow(open_seg_check_aug) > 0){
 
     -   Note errors
 
-```{r message=F}
+```{r message=FALSE}
 exp_cell_codes <- read_excel(SAMPLE_PREP_PATH,
                              sheet = "Augment_Specs")
 ```
@@ -968,12 +966,9 @@ sel_sbj_line <- augment %>%
 save(augment, main, file=f_string("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))
 ```
 
-
 ```{r message=FALSE}
 # IF YOU ARE RUNNING `USCS_Weighting.Rmd` right after this, run this chunk and then you DO NOT have to reload in the data with the step `load(f_string("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))`
 # There's no harm if you do, but the dataframes you need will stay in your environment
 
 rm.all.but(keep = c('main', 'augment'))
 ```
-
-

@@ -16,7 +16,7 @@ cd \\sys_op\methods\Amex.549\Sample\2023\2023-02\
 3.  Run the following command to clone the `master` branch:
     - This will create a clone of the template repository in the directory you specified above
 ```
-git clone https://github.com/Beck-DeYoung-NA/USCS-Sample-Prep.git
+git clone https://github.com/Beck-DeYoung-NA/USCS-Sample-Prep.git --branch main --single-branch
 ```
 4.  Wait for the cloning process to finish.
 5. Navigate into the new directory

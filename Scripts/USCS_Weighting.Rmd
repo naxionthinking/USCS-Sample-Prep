@@ -13,7 +13,8 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load("tidyverse",
                "readxl",
                "stringi",
-               "lubridate")
+               "lubridate",
+               "varhandle")
 
 source('Config_and_Helpers.R')
 
@@ -91,15 +92,9 @@ weights <- read_excel(SAMPLE_PREP_PATH,
 
 weights <- weights %>% 
   # We first need to extract the sp codes
-  # either the name of the segment has the designated codes
-  # Or they are separately provided in another column SP_Code2
-  
-  # if there is an sp code in the helper column, we use it
-  mutate(
-    sp_code = if_else(str_detect(sp_code, "[0-9]{3}"),
-                      str_extract_all(sp_code, " [0-9]{3}"),
-                      as.list(NA_character_))) %>% 
-  
+  mutate(sp_code = if_else(str_detect(sp_code, "[0-9]{3}"),
+                           str_extract_all(sp_code, " [0-9]{3}"),
+                           as.list(NA_character_))) %>% 
   # Create all the conditions from the information in the excel
   mutate(
         # The tenure variable either looks like
@@ -109,81 +104,75 @@ weights <- weights %>%
             # NUM1 to <NUM2 mos
             # Num1 to NUM2 mos
         # So we need to account for all cases
-         tenure_var = if_else(str_detect(tenure, "days"), 
+        tenure_var = if_else(str_detect(tenure, "days"), 
                               # If this is the days case. then divide by 30 and round up
-                              (str_extract(tenure, "[0-9]+") %>% 
-                                 as.numeric() / 30) %>% ceiling() %>% as.character(),
+                              ceiling(parse_number(tenure)/ 30) %>% as.character(),
                               # If not, extract all numbers (NUM or NUM1 and NUM2)
                               map_chr(str_extract_all(tenure, "[0-9]+"), ~ str_c(.x, collapse=","))),
          
-         # The spend variable only has one number but can be of the form
+        # The spend variable only has one number but can be of the form
             # $NUM+
             # <$NUM
-         account_spend = parse_number(spend), # This extracts just the number
+        account_spend = parse_number(spend), # This extracts just the number
          
-         # Here we determine if there was a < or + indicating whether 
+        # Here we determine if there was a < or + indicating whether 
           # we are looking at values less than or greater than the number
-         across(c("tenure", "spend"), 
-                ~case_when(str_detect(., "\\+") ~ ">=",
-                           str_detect(., "\\<") ~ "<",
-                           T ~ NA_character_), 
-                .names = "{col}_sign"),
-         
-         # Now we create the tenure condition
-         # This looks like 
+        tenure_sign = case_when(str_detect(tenure, "\\+") ~ ">=",
+                                str_detect(tenure, "\\<") ~ "<",
+                                TRUE ~ NA_character_), 
+        spend_sign = case_when(str_detect(spend, "\\+") ~ ">=",
+                                 str_detect(spend, "\\<") ~ "<",
+                                 TRUE ~ NA_character_),
+        # Now we create the tenure condition
+        # This looks like 
             # NUM1 <= tenure_var  & tenure_var >= NUM2
             # NUM < tenure_var ETC
-         tenure_cond = case_when(
-           is.na(tenure) ~ NA_character_,
-           # in this case, there is NUM1 and NUM2
-           str_detect(tenure_var, ",") ~ paste(get_first_num(tenure_var),
-                                               " <= tenure_var & tenure_var ",
-                                               # This is where we determine if 
-                                               # the condition is NUM1 to <NUM2 or NUM1 to NUM2
-                                               if_else(is.na(tenure_sign),
-                                                       "<=",
-                                                       tenure_sign),
-                                               get_last_num(tenure_var)),
-           # This case is one NUM and we just incorporate the sign we extracted
-           T ~ paste("tenure_var", tenure_sign, tenure_var)),
-         
-         # Here we create the spend condition which just uses the extracted sign
-         spend_cond = if_else(
-           is.na(spend), NA_character_,
-           paste("account_spend", spend_sign, account_spend)),
-          
+        tenure_cond = case_when(is.na(tenure) ~ NA_character_,
+                                # in this case, there is NUM1 and NUM2
+                                str_detect(tenure_var, ",") ~ paste(get_first_num(tenure_var),
+                                                                    " <= tenure_var & tenure_var ", 
+                                                                    # This is where we determine if 
+                                                                    # the condition is NUM1 to <NUM2 or NUM1 to NUM2
+                                                                    if_else(is.na(tenure_sign),
+                                                                            "<=",
+                                                                            tenure_sign),
+                                                                    get_last_num(tenure_var)),
+                                # This case is one NUM and we just incorporate the sign we extracted
+                                TRUE ~ paste("tenure_var", tenure_sign, tenure_var)),
+        
+        # Here we create the spend condition which just uses the extracted sign
+        spend_cond = if_else(is.na(spend), 
+                             NA_character_,
+                             paste("account_spend", spend_sign, account_spend)),
          # get the sp code condition
-           sp_cond = if_else(
-             is.na(sp_code),
-             NA_character_,
-             # This just creates the conditions when there are multiple codes
-             sapply(sp_code, function(x) paste0("sp_code %in% c(", paste(x, collapse = ","), ")"))),
+        sp_cond = if_else(is.na(sp_code),
+                          NA_character_,
+                          # This just creates the conditions when there are multiple codes
+                          sapply(sp_code, function(x) paste0("sp_code %in% c(", paste(x, collapse = ","), ")"))),
          
-         # Augmented cell condition
-         naw_cond = if_else(
-           is.na(naw_cell_code),
-           NA_character_,
-           paste0("naw_cell_code ==", "'", naw_cell_code, "'")),
+        # Augmented cell condition
+        naw_cond = if_else(is.na(naw_cell_code),
+                           NA_character_,
+                           paste0("naw_cell_code ==", "'", naw_cell_code, "'")),
          
-         # we need to properly order the conditions so ones that overlap work properly
-         ordering = case_when(
-                      str_detect(weighting_segment, "^TX")  ~ 1,
-                      str_detect(weighting_segment, "^ZX")  ~ 2,
-                      str_detect(weighting_segment, "^AUG") ~ 3,
-                      str_detect(weighting_segment, "^ET")  ~ 4,
-                      !str_detect(weighting_segment, "SP")  ~ 5,
-                      T ~ 6
-                      )
+        # we need to properly order the conditions so ones that overlap work properly
+        ordering = case_when(str_detect(weighting_segment, "^TX")  ~ 1,
+                             str_detect(weighting_segment, "^ZX")  ~ 2,
+                             str_detect(weighting_segment, "^AUG") ~ 3,
+                             str_detect(weighting_segment, "^ET")  ~ 4,
+                             !str_detect(weighting_segment, "SP")  ~ 5,
+                             TRUE ~ 6)
   ) %>% 
   # Create the full condition
   unite(col = 'full_cond', sp_cond, tenure_cond, spend_cond, naw_cond, 
-        sep = " & ", na.rm=T) %>%
+        sep = " & ", na.rm=TRUE) %>%
   mutate(full_cond = glue("{full_cond} ~ '{weighting_segment}'")) %>% 
   arrange(ordering) %>% 
   dplyr::select(weighting_segment, 
                 sp_code, 
                 naw_cell_code, 
-                tenure, spend, full_cond)
+                tenure, spend, 
+                full_cond)
 ```
 
  - Apply the weighting conditions and generate the segments
@@ -235,7 +224,7 @@ weighted_sample <- weighted_sample %>%
       spend == "J" ~ 10),
     
     bf_fico_range = ifelse(fico_range == "", "",
-                           str_extract(fico_range, "[0-9]+")),
+                           parse_number(fico_range)),
     
     bf_st_exp_enroll_in = case_when(
       st_exp_enroll_in == "C" ~ "1",
@@ -269,21 +258,22 @@ weighted_sample <- weighted_sample %>%
       myca_flag == "" ~ "",
       myca_flag == "Y" ~ "1",
       myca_flag == "N" ~ "2",
-      T ~ "REF"),
+      TRUE ~ "REF"),
     
     bf_mr_in = case_when(mr_in == "" ~ "",
                          mr_in == "Y" ~ "1",
                          mr_in == "N" ~ "2",
-                         T ~ "REF"),
+                         TRUE ~ "REF"),
     
     bf_purch_apr_rt = case_when(
-      purch_apr_rt > 0 ~ purch_apr_rt %>% round(2) %>% as.character(),
+      purch_apr_rt > 0 ~ round(purch_apr_rt,2) %>% as.character(),
       purch_apr_rt == -1 ~ "",
-      T ~ "REF"),
+      TRUE ~ "REF"),
     
     # /**********CHECK TENURE*************/
     cv_cs_et_type = case_when(
-      #Ops asked that SP code 158, new in Jan 2023, be called early tenure even though tenure_var values exceed 4 see email from Hunter 1/3/23*/
+      # Ops asked that SP code 158, new in Jan 2023, be called early tenure 
+      # even though tenure_var values exceed 4 see email from Hunter 1/3/23*/
       marketer_code == "SP158" ~ 1, 
       tenure_var >= 2 & tenure_var <= 4  ~ 1,
       tenure_var >= 5 & tenure_var <= 15 ~ 2,
@@ -353,57 +343,59 @@ weighted_sample <- weighted_sample %>%
 	  #/* cyear and Month_2dig will be used to append the Weight_segment and CV_interview_data variables.
 	  #   note that cyear and cmonth are initizlized in step1*/
     
-         month_2dig = formatC(MONTH_NO, width = 2, flag = "0"),
-         cv_interview_date = paste0(YEAR, month_2dig),
-         weighting_segment_nu = paste0(weighting_segment, cv_interview_date),
-    
-         best_dma = ifelse(best_dma_cd == 0 |
-                            best_dma_cd == 999 |
-                            is.na(best_dma_cd),
-                          "REF",
-                          as.character(best_dma_cd)),
-         
-         #card anniversary date
-         card_anniv_dt = if_else(card_anniv_dt == "0001-01-01",
-                                 NA_character_, card_anniv_dt),
-         anniv = as_date(card_anniv_dt, format = "%Y-%m-%d"),
-         bf_card_anniv_year = year(anniv),
-         bf_card_anniv_month = month(anniv),
-         
-         # Card setup date
-         setup = as_date(setup_dt, format = "%Y-%m-%d"),
-         bf_setup_year = year(setup),
-         bf_setup_month = month(setup),
-         bf_setup_day = day(setup),
-         
-         # Prog Enter Date
-         enrolls = as_date(mr_init_enroll_dt, format = "%Y-%m-%d"),
-         bf_mr_init_enroll_year = year(enrolls),
-         bf_mr_init_enroll_month = month(enrolls),
-         bf_mr_init_enroll_day = day(enrolls),
-         
-         	#*AGE;
-         dInterviewDate = YEAR + (MONTH_NO/12),
-         dYOB = floor(dInterviewDate-raw_age),
-         year_of_birth = ifelse(is.na(raw_age) | 
-                                  dYOB < 1850 | 
-                                  dYOB > (year(Sys.Date()) - 17), 
-                                "", 
-                                as.character(dYOB)),
-    
-         generation2 = case_when(year_of_birth == "" ~ "",
-                                 dYOB < 1946 ~ "Silent: 1945 and prior",
-                                 dYOB < 1965 ~ "Baby Boomers: 1946 – 1964",
-                                 dYOB < 1980 ~ "Generation X: 1965 – 1979",
-                                 dYOB < 1989 ~ "Older Millennials: 1980 – 1988",
-                                 dYOB < 1997 ~ "Younger Millennials: 1989 – 1996",
-                                 dYOB >= 1997 ~ "Generation Z: 1997 and later"),
-    
+    month_2dig = formatC(MONTH_NO, width = 2, flag = "0"),
+    cv_interview_date = paste0(YEAR, month_2dig),
+    weighting_segment_nu = paste0(weighting_segment, cv_interview_date),
+  
+    best_dma = ifelse(best_dma_cd == 0 |
+                      best_dma_cd == 999 |
+                      is.na(best_dma_cd),
+                      "REF",
+                       as.character(best_dma_cd)),
+       
+    #card anniversary date
+    card_anniv_dt = if_else(card_anniv_dt == "0001-01-01",
+                            NA_character_, card_anniv_dt),
+    anniv = as_date(card_anniv_dt, format = "%Y-%m-%d"),
+    bf_card_anniv_year = year(anniv),
+    bf_card_anniv_month = month(anniv),
+       
+    # Card setup date
+    setup = as_date(setup_dt, format = "%Y-%m-%d"),
+    bf_setup_year = year(setup),
+    bf_setup_month = month(setup),
+    bf_setup_day = day(setup),
+       
+    # Prog Enter Date
+    mr_init_enroll_dt = if_else(mr_init_enroll_dt == "0001-01-01",
+                            NA_character_, mr_init_enroll_dt),
+    enrolls = as_date(mr_init_enroll_dt, format = "%Y-%m-%d"),
+    bf_mr_init_enroll_year = year(enrolls),
+    bf_mr_init_enroll_month = month(enrolls),
+    bf_mr_init_enroll_day = day(enrolls),
+       
+    #*AGE;
+    dInterviewDate = YEAR + (MONTH_NO/12),
+    dYOB = floor(dInterviewDate-raw_age),
+    year_of_birth = ifelse(is.na(raw_age) | 
+                           dYOB < 1850 | 
+                           dYOB > (year(Sys.Date()) - 17), 
+                           "", 
+                           as.character(dYOB)),
+  
+    generation =case_when(year_of_birth == "" ~ "",
+                           dYOB < 1946 ~ "Silent: 1945 and prior",
+                           dYOB < 1965 ~ "Baby Boomers: 1946 - 1964",
+                           dYOB < 1980 ~ "Generation X: 1965 - 1979",
+                           dYOB < 1989 ~ "Older Millennials: 1980 - 1988",
+                           dYOB < 1997 ~ "Younger Millennials: 1989 - 1996",
+                           dYOB >= 1997 ~ "Generation Z: 1997 and later"),
+  
     bdl_fico_bucket = case_when(is.na(raw_fico) | raw_fico == -1 ~ "",
-                                     raw_fico < 650 ~ "1",
-                                     raw_fico < 720 ~ "2",
-                                     raw_fico >= 720 ~ "3"),
-    
+                                raw_fico < 650 ~ "1",
+                                raw_fico < 720 ~ "2",
+                                raw_fico >= 720 ~ "3"),
+  
     cv_amex_has_fee = case_when(marketer_code %in% c("SP101", "SP103", "SP105", 
                                                      "SP106", "SP108", "SP110", 
                                                      "SP120", "SP124", "SP125", 
@@ -420,7 +412,7 @@ weighted_sample <- weighted_sample %>%
                                                      "SP132", "SP136", "SP145", 
                                                      "SP153", "SP156") ~ "2",
                                 TRUE ~ "REF"),
-    
+  
     account_spend = ifelse(is.na(account_spend), 0, account_spend),
     
     cv_mr_category = case_when(mr_tier_prog_cd == "PR" ~ 1,
@@ -439,6 +431,7 @@ weighted_sample <- weighted_sample %>%
     account_share_of_wallet = ifelse(size_of_wallet != 0, 
                                      account_spend / size_of_wallet, 
                                      NA),  
+    
     card_name =case_when(marketer_code == 'SP101' ~ 'Platinum',
                          marketer_code == 'SP103' ~ 'Gold Charge No Rewards',
                          marketer_code == 'SP105' ~ 'Gold',
@@ -533,7 +526,7 @@ yobs <- weighted_sample %>% mutate(age = ceiling(raw_age)) %>%
   arrange(age) %>% 
   make_nice_table("Checking year of birth calculations") # Are ages correct
 
-gens <- weighted_sample %>% distinct(year_of_birth, generation2) %>% 
+gens <- weighted_sample %>% distinct(year_of_birth, generation) %>% 
   arrange(year_of_birth) %>% 
   make_nice_table("Checking Generation calculations")
 
@@ -618,6 +611,15 @@ weighted_sample <- weighted_sample %>% left_join(card_art_info)
 sp_sv_card_freq <- weighted_sample %>% 
   freq_table(c("marketer_code","sv_card_art"), "SP Code vs SV Card Freq Table")
 ```
+
+```{r}
+# Change all date columns to "M/D/YYYY" format
+weighted_sample <- weighted_sample %>% 
+  mutate(across(c("setup_dt",
+                  'card_anniv_dt',
+                  'mr_init_enroll_dt'), ~format(as.Date(.x), format = "%m/%d/%Y")))
+```
+
 
 ```{r}
 sp135 <- weighted_sample %>% filter(marketer_code == 'SP135')
@@ -707,7 +709,7 @@ final <- final %>% set_names(str_to_upper(names(final))) %>%
                 BDL_AGE = RAW_AGE,
                 BDL_FICO_SCORE = RAW_FICO,
                 YEAR_OF_BIRTH,
-                CV_Generation_New = GENERATION2,
+                CV_Generation_New = GENERATION,
                 BDL_FICO_BUCKET,
                 SV_SUBJECT_LINE_INSERT,
                 SV_CARD_ART,
@@ -718,7 +720,7 @@ final <- final %>% set_names(str_to_upper(names(final))) %>%
 ```{r}
 final %>% write_csv("../Files_to_send/Amex_760_{MONTH}_{YEAR}_All_Sample_Frame_Information_Qualtrics_{Sys.Date()}.csv" %>% f_string(), na ="")
 
-varhandle::rm.all.but(keep=c('final'))
+rm.all.but(keep=c('final'))
 ```
 
 

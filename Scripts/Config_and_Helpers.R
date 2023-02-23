@@ -33,6 +33,8 @@ SUBJECT_LINE_PATH <-   "{FILE_LOOKUPS}/MarketVoice - Card Lookup20230124_ForAnal
 CENTURION_TIER_PATH <- "{FILE_LOOKUPS}/760_CENTURION_TIER_CVs.csv" %>% f_string()
 CARD_ART_PATH <-       "{FILE_LOOKUPS}/Card Art URLs 20230124.csv" %>% f_string()
 
+
+
 # Check that a string doesn't match any non-letter
 is_letters_only <- function(x) !grepl("[^A-Za-z]", x)
 

@@ -43,7 +43,8 @@ if (!require("pacman")) install.packages("pacman")
 # Loads in necessary packages, and installs them if you don't have them installed
 pacman::p_load("tidyverse",
                "readxl",
-               "stringi")
+               "stringi",
+               "varhandle")
 
 source('Config_and_Helpers.R')
 
@@ -966,3 +967,13 @@ sel_sbj_line <- augment %>%
 # Store important sample datasets for weighting step
 save(augment, main, file=f_string("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))
 ```
+
+
+```{r message=FALSE}
+# IF YOU ARE RUNNING `USCS_Weighting.Rmd` right after this, run this chunk and then you DO NOT have to reload in the data with the step `load(f_string("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))`
+# There's no harm if you do, but the dataframes you need will stay in your environment
+
+rm.all.but(keep = c('main', 'augment'))
+```
+
+

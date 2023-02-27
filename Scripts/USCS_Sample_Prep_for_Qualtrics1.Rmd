@@ -651,9 +651,11 @@ if (nrow(open_seg_check) > 0){
 -   Generates a count for Early Tenure and Non-Early Tenure
 
 ```{r }
-et_tab2 <- main %>% 
+et_tab <- main %>% 
   count(marketer_code, tenure_cat) %>%
-  spread(tenure_cat, n, fill = 0) %>%
+  spread(tenure_cat, n, fill = 0)
+
+et_tab <- et_tab %>% 
   # Create new variables for the split of early and non-early tenure counts
   mutate(et = `1`,
          non_et = rowSums(et_tab[3:11])) %>% 
@@ -691,7 +693,7 @@ write_csv(main, "../Data/main_{MONTH_SHORT}_{YEAR}.csv" %>% f_string())
 ```{r}
 mr_in_ct <- table(main$mr_in,main$mr_in_n)
 
-if (mr_in_ct[1] == 0 & mr_in_ct[4] == 0){
+if (mr_in_ct[1,1] == 0 & mr_in_ct[2,2] == 0){
   message("SUCCESS: MR IN split worked correctly")
 } else{
   warning("MR IN split did not work correctly.")}
@@ -701,7 +703,6 @@ if (mr_in_ct[1] == 0 & mr_in_ct[4] == 0){
 
 -   Let the Operation's Manager know the frequency by cell_code
 -   All OPEN augment sample gets assigned to NPS
--   There are no longer any CCSG Augments
 
 **Check distribution of Augment marketer_code by cell_code. Does it align
 with previous month?** *(This may have to be a manual check. I can probably
@@ -719,7 +720,7 @@ cell_code_naw_sp_ct <- augment %>%
 ```
 
 Check the Marketer Codes Frequency for each Augment to make sure they align
-with the previous results (originally specs in 'Main list'!D48:D54)
+with the previous months results
 
 ```{r}
 
@@ -760,7 +761,7 @@ if (nrow(open_seg_check_aug) > 0){
 
 -   Checking expected specs to actual specs for augmented data.
 
--   Expected specs found in `Sample_Prep_Helper.xlsx` sheet *Cell_Codes*
+-   Expected specs found in `Sample_Prep_Helper.xlsx` sheet *Augment_Specs*
 
 -   Check tenure category and var Frequency to make sure they align with
     the expected specs
@@ -773,7 +774,7 @@ exp_cell_codes <- read_excel(SAMPLE_PREP_PATH,
 ```
 
 ```{r}
-# Check if someone in the augmented file is in the open segment file
+# Check ranges of tenure and spend for augment cells
 augment <- augment %>% 
   left_join(open_seg, by = c("gmpi_base_cust_id", "customer_id"))
 
@@ -835,25 +836,6 @@ if (sum(acct_spend_ncc_check$bad_spend) > 0){
   } else{
     message("SUCCESS: Minimum spend met for all codes")
 }
-```
-
--   Check the spend frequency for naw_cell_code=68 to make sure none of the
-    SP codes listed on the "SPEND \> \$0" tab have \$0 spend
-
-    ### I'm not sure what this is supposed to be doing. It looks like all of the Sp codes are listed on the Spend \> 0 tab. So what this would be checking is it the code CELL68 has a spend of 0 somewhere.
-
-```{r}
-open_seg_check_aug %>% 
-  filter(naw_cell_code == "CELL68") %>% 
-  group_by_summary_table("marketer_code", "account_spend")
-```
-
--   Last set of tables is to see how many people are in error (don't worry
-    about these tables if both of above are checked.
-
-```{r}
-cc_freq_aug <- augment %>% 
-  freq_table("cell_code", "Cell Code Freqs Augmented Data")
 ```
 
 -   This part of the code flags people for deletion for various reasons as
@@ -923,7 +905,7 @@ if (n_flags > 0){
   cat("\n")
   warning("Find specifics in file `Tenure_or_Spend_Flagged_{MONTH_SHORT}_{YEAR}.csv` in the Files_to_send folder" %>% f_string())
   
-  flag_freqs <- flags_only %>% freq_table("Flag_to",
+  flag_freqs <- flags_only %>% freq_table("flag_to",
                             "Flag Freqs")
   
   

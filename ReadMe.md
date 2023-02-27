@@ -258,4 +258,4 @@ I can also add more descriptive statements for the outputs, such as
 
 **Lines 369-377** : In the SAS code and excel file, there is a check for the DMA frequency. I'm not sure what is happening in this check, so I was never able to code it up in R.
 
-**Lines 711-728** : This checks if the cell code frequencies for the augment cells are the same as before segmented the data. This seems unnecessary because these numbers are generated from the same dataset just with one having SP138 and 139 removed. Is this the problem this is checking for?
+**Lines 711-728** : This checks if the cell code frequencies for the augment cells are the same as before segmented the data. This seems unnecessary because these numbers are generated from the same dataset just with one having SP138 and 139 removed. Is this the problem this is checking for

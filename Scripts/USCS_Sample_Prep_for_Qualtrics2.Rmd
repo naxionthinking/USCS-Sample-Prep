@@ -1,5 +1,5 @@
 ---
-title: "USCS Prep Sample for Qualtrics 1"
+title: "USCS Prep Sample for Qualtrics 2"
 output:
   html_document:
     df_print: paged
@@ -7,6 +7,22 @@ editor_options:
   markdown:
     wrap: 75
 ---
+
+### Notes
+
+-   Assigns Weighting Segments
+
+-   Creates New Variables
+
+-   Writes the 'All Sample' file
+
+-   Starting in January 2013, we only had to send augment sample to
+    Research Now,
+
+-   In April 2013, we had to start sending something to Cheetah Mail
+    again because CELL15 gets a 3:1 allocation,
+
+-   In 2015 Cheetah Mail file started to get sent to Salesforce
 
 
 ```{r Load in Packages, message=F, warning=F, echo=F}
@@ -27,20 +43,6 @@ options(scipen = 9999,# Remove scientific notation
 knitr::opts_chunk$set(results = "asis",
                       echo=F)
 ```
-
-## STEP 3
-
--   Writes that Augment Sample File
-
--   Writes the 'All Sample' file,
-
--   Starting in January 2013, we only had to send augment sample to
-    Research Now,
-
--   In April 2013, we had to start sending something to Cheetah Mail
-    again because CELL15 gets a 3:1 allocation,
-
--   In 2015 Cheetah Mail file started to get sent to Salesforce
 
 
 ```{r}
@@ -85,20 +87,23 @@ message("There are {sum(is.na(combined$raw_fico))} missing values for raw_fico" 
 - It automatically extracts the conditions for the weighting segments
 - An example is 
   - If sp_code = 130 & tenure_var $\geq$ 241 & account_spend $\geq$ 1500 THEN weighting_segment='SP103HTHS'
+  
 ```{r WEIGHTING CONDITIONS}
 # Load in weighting conditions
-weights <- read_excel(SAMPLE_PREP_PATH,
+weight_conditions <- read_excel(SAMPLE_PREP_PATH,
                       sheet = "Weighting_Segments",
                       na = c("", "n/a")) %>% 
   # Drop empty rows
   drop_na(sp_code)
 
-weights <- weights %>% 
-  # We first need to extract the sp codes
-  mutate(sp_code = if_else(str_detect(sp_code, "[0-9]{3}"),
+weight_conditions <- weight_conditions %>% 
+  # We first need to extract the sp codes (which are 3 digit numbers)
+  # This extracts the sp codes into a list to account for if there are multiple codes associated with a single weighting segment
+  mutate(sp_code = if_else(str_detect(sp_code, "[0-9]{3}"), 
                            str_extract_all(sp_code, " [0-9]{3}"),
                            as.list(NA_character_))) %>% 
-  # Create all the conditions from the information in the excel
+  
+  # Extract tenure and spend conditions from excel's format
   mutate(
         # The tenure variable either looks like
             # NUM days+
@@ -125,7 +130,10 @@ weights <- weights %>%
                                 TRUE ~ NA_character_), 
         spend_sign = case_when(str_detect(spend, "\\+") ~ ">=",
                                  str_detect(spend, "\\<") ~ "<",
-                                 TRUE ~ NA_character_),
+                                 TRUE ~ NA_character_)) %>% 
+  
+  # Create all the conditions from the information in the excel
+  mutate(
         # Now we create the tenure condition
         # This looks like 
             # NUM1 <= tenure_var  & tenure_var >= NUM2
@@ -156,21 +164,22 @@ weights <- weights %>%
         # Augmented cell condition
         naw_cond = if_else(is.na(naw_cell_code),
                            NA_character_,
-                           paste0("naw_cell_code ==", "'", naw_cell_code, "'")),
-         
-        # we need to properly order the conditions so ones that overlap work properly
+                           paste0("naw_cell_code ==", "'", naw_cell_code, "'"))) %>% 
+  
+  # we need to properly order the conditions so ones that overlap work properly
+  mutate(
         ordering = case_when(str_detect(weighting_segment, "^TX")  ~ 1,
                              str_detect(weighting_segment, "^ZX")  ~ 2,
                              str_detect(weighting_segment, "^AUG") ~ 3,
                              str_detect(weighting_segment, "^ET")  ~ 4,
                              !str_detect(weighting_segment, "SP")  ~ 5,
-                             TRUE ~ 6)
-  ) %>% 
-  # Create the full condition
+                             TRUE ~ 6)) %>% 
+  # Create the full condition by bringing together all conditions
   unite(col = 'full_cond', sp_cond, tenure_cond, spend_cond, naw_cond, 
-        sep = " & ", na.rm=TRUE) %>%
+        sep = " & ", na.rm=TRUE) %>% # Removes any conditions that are not relevant to the given segment
   mutate(full_cond = glue("{full_cond} ~ '{weighting_segment}'")) %>% 
   arrange(ordering) %>% 
+  # 
   dplyr::select(weighting_segment, 
                 sp_code, 
                 naw_cell_code, 
@@ -178,11 +187,13 @@ weights <- weights %>%
                 full_cond)
 ```
 
- - Apply the weighting conditions and generate the segments
+
  
 ```{r}
+#  Apply the weighting conditions and generate the segments
+# This is taken all those conditions we generated in the previous chunk and put them together into a case when
 weighted_sample <- combined %>% 
-  mutate(weighting_segment = case_when(!!!rlang::parse_exprs(weights$full_cond)))
+  mutate(weighting_segment = case_when(!!!rlang::parse_exprs(weight_conditions$full_cond)))
 ```
 
 - Verify splits were done correctly
@@ -540,25 +551,27 @@ fico <- weighted_sample %>% distinct(raw_fico, bdl_fico_bucket) %>%
 
 
 ```{r}
-# Missing Full Name
+# Identify people with missing first and last names
 miss_name <- weighted_sample %>% 
-  filter(is.na(first_nm) & is.na(last_nm)) %>% 
+  filter(is.na(first_nm) | is.na(last_nm)) %>% 
   dplyr::select(customer_id,first_nm, last_nm)
 
 if (nrow(miss_name) > 0){
-  warning('Fully missing names found')
-  print(miss_name)
+  warning('People with missing first or last names found')
+  message("These will be replaced with 'Valued Card Member'")
+ miss_name %>% make_nice_table("People with Missing Names")
 } else{
-  message("SUCCESS: No Fulling missing names")
+  message("SUCCESS: No people with missing first or last names")
 }
 ```
-- Fills in the blank names with "Valued Card Member" because First and Last name are now included in the AllSample file
+
 ```{r}
+# Fill in the blank names with "Valued Card Member" because First and Last name are now included in the AllSample file
 weighted_sample <- weighted_sample %>% 
   mutate(name_tmp = is.na(first_nm) | is.na(last_nm) | nchar(first_nm) == 10,
     first_nm = if_else(name_tmp,
-                         "Valued Card",
-                                first_nm),
+                       "Valued Card",
+                       first_nm),
          last_nm = if_else(name_tmp,
                           "Member",
                           last_nm))

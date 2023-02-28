@@ -209,7 +209,7 @@ main_code_freq <- all_base %>%
 
 # Write to csv to send to OPS Manager 
 main_code_freq %>%  
-  write_csv(f_string("../Files_to_send/Main_Code_Freqs_{MONTH_SHORT}_{YEAR}.csv")) 
+  write_csv(f_str("../Files_to_send/Main_Code_Freqs_{MONTH_SHORT}_{YEAR}.csv")) 
 ```
 
 ```{r}
@@ -226,7 +226,7 @@ cell_code_freq <- cell_code_freq %>%
 
 # Save file to be sent to PM
 cell_code_freq %>% 
-  write_csv(f_string("../Files_to_send/Cell_Code_Freqs_{MONTH_SHORT}_{YEAR}.csv"))
+  write_csv(f_str("../Files_to_send/Cell_Code_Freqs_{MONTH_SHORT}_{YEAR}.csv"))
 
 ccf <- cell_code_freq %>% 
   make_nice_table("Cell Code Frequencies with NAW Cell Codes")
@@ -342,8 +342,8 @@ if (nrow(all) != nrow(all_base)){
 
 ```{r}
 # Save datasets and remove from memory
-all_base %>% write_csv("../Data/all_base_{MONTH_SHORT}_{YEAR}.csv" %>% f_string())
-all_spend %>% write_csv("../Data/all_spend_{MONTH_SHORT}_{YEAR}.csv" %>% f_string())
+all_base %>% write_csv("../Data/all_base_{MONTH_SHORT}_{YEAR}.csv" %>% f_str())
+all_spend %>% write_csv("../Data/all_spend_{MONTH_SHORT}_{YEAR}.csv" %>% f_str())
 #rm(all_base, all_spend) 
 ```
 
@@ -494,7 +494,7 @@ tab <- main_sp_codes_spend_ct %>% as.data.frame() %>%
 if ("A" %in% tab$spend) {
   bad_sp_code_a <- tab$sp_code[tab$spend == "A"]
   for (code in bad_sp_code_a) {
-    warning("Spending category A found in Sp Code: {code}" %>% f_string())
+    warning("Spending category A found in Sp Code: {code}" %>% f_str())
     cat("\n")}
 } else{
   message("SUCCESS: No Spend A category found for Sp Codes which should not have that category")
@@ -514,7 +514,7 @@ min_acct_spend_a <- main_sp_codes_spend %>%
 if (sum(min_acct_spend_a$spend_zero > 0)){
   bad_min_spend <- min_acct_spend_a$marketer_code[min_acct_spend_a$spend_zero]
     for (code in bad_min_spend) {
-      warning("Minimum Account spend is not greater than zero for requested Sp Code: {code}" %>% f_string())
+      warning("Minimum Account spend is not greater than zero for requested Sp Code: {code}" %>% f_str())
       cat("\n")}
 } else{
   message("SUCCESS: Minimum Account spend is greater than zero for all requested Sp codes")
@@ -577,12 +577,12 @@ if (length(check_a2) == nrow(check_a)){ # Everything should be in check2
   message("SUCCESS: All Sp codes are in only two of the lists")
 } else if (length(check_a1) > 0 ){
     for (code in check_a1) {
-      warning("Sp Code: {code} is only in one of the lists. Look at description above for what to do" %>% f_string())
+      warning("Sp Code: {code} is only in one of the lists. Look at description above for what to do" %>% f_str())
       cat("\n")}
   warning("")
 } else if (length(check_a3) > 0 ){
     for (code in check_a3) {
-      warning("Sp Code: {code} is in all three lists" %>% f_string())
+      warning("Sp Code: {code} is in all three lists" %>% f_str())
       cat("\n")}
     warning("Look at description above for what to do")
 }
@@ -686,8 +686,8 @@ main <- main %>% mutate(selected = 0,
 ```
 
 ```{r }
-write_csv(all, "../Data/all_{MONTH_SHORT}_{YEAR}.csv" %>% f_string())
-write_csv(main, "../Data/main_{MONTH_SHORT}_{YEAR}.csv" %>% f_string())
+write_csv(all, "../Data/all_{MONTH_SHORT}_{YEAR}.csv" %>% f_str())
+write_csv(main, "../Data/main_{MONTH_SHORT}_{YEAR}.csv" %>% f_str())
 ```
 
 ```{r}
@@ -792,7 +792,7 @@ tv_ncc_tab <- tv_ncc_check %>%
 # Check if augment cell tenure and spends are within expected ranges
 if (sum(tv_ncc_check$min_not_okay) > 0){
   for (ncc in tv_ncc_check$naw_cell_code[tv_ncc_check$min_not_okay]){
-    warning("Minimum Tenure not correct for {ncc}" %>% f_string())
+    warning("Minimum Tenure not correct for {ncc}" %>% f_str())
     cat("\n")
   } 
 } else{
@@ -801,7 +801,7 @@ if (sum(tv_ncc_check$min_not_okay) > 0){
 
 if (sum(tv_ncc_check$max_not_okay) > 0){
   for (ncc in tv_ncc_check$naw_cell_code[tv_ncc_check$max_not_okay]){
-    warning("Maximum Tenure not correct for {ncc}" %>% f_string())
+    warning("Maximum Tenure not correct for {ncc}" %>% f_str())
     cat("\n")} 
   } else{
     message("SUCCESS: Maximum tenures are as expected for all codes")
@@ -831,7 +831,7 @@ acct_spend_ncc <- acct_spend_ncc_check %>%
 
 if (sum(acct_spend_ncc_check$bad_spend) > 0){
   for (ncc in acct_spend_ncc_check$naw_cell_code[acct_spend_ncc_check$bad_spend]){
-    warning("Minimum spend not met for {ncc}" %>% f_string())
+    warning("Minimum spend not met for {ncc}" %>% f_str())
     cat("\n")} 
   } else{
     message("SUCCESS: Minimum spend met for all codes")
@@ -897,13 +897,13 @@ flags_only <- flag %>% filter(!is.na(flag_to)) %>%
 
 flags_only %>% 
   write_csv("../Files_to_send/Tenure_or_Spend_Flagged_{MONTH_SHORT}_{YEAR}.csv" %>%
-              f_string())
+              f_str())
 
 n_flags <- nrow(flags_only)
 if (n_flags > 0){
-  warning("There are {n_flags} people flagged for deletion" %>% f_string())
+  warning("There are {n_flags} people flagged for deletion" %>% f_str())
   cat("\n")
-  warning("Find specifics in file `Tenure_or_Spend_Flagged_{MONTH_SHORT}_{YEAR}.csv` in the Files_to_send folder" %>% f_string())
+  warning("Find specifics in file `Tenure_or_Spend_Flagged_{MONTH_SHORT}_{YEAR}.csv` in the Files_to_send folder" %>% f_str())
   
   flag_freqs <- flags_only %>% freq_table("flag_to",
                             "Flag Freqs")
@@ -945,11 +945,11 @@ sel_sbj_line <- augment %>%
 
 ```{r}
 # Store important sample datasets for weighting step
-save(augment, main, file=f_string("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))
+save(augment, main, file=f_str("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))
 ```
 
 ```{r message=FALSE}
-# IF YOU ARE RUNNING `USCS_Weighting.Rmd` right after this, run this chunk and then you DO NOT have to reload in the data with the step `load(f_string("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))`
+# IF YOU ARE RUNNING `USCS_Weighting.Rmd` right after this, run this chunk and then you DO NOT have to reload in the data with the step `load(f_str("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))`
 # There's no harm if you do, but the dataframes you need will stay in your environment
 
 rm.all.but(keep = c('main', 'augment'))

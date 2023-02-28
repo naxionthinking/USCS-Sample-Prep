@@ -7,7 +7,8 @@ pacman::p_load("tidyverse",
                "kableExtra",
                "knitr")
 
-f_string <- function(str) str %>% glue() %>% as.character() 
+# Equivalent to python f-string
+f_str <- function(str) str %>% glue() %>% as.character() 
 
 # VARIABLES TO UPDATE
 YEAR <- 2023
@@ -25,32 +26,32 @@ PREV_MONTH_SHORT <-month.abb[PREV_MONTH_NO] %>% str_to_upper()
 PREV_YEAR_SHORT <- ifelse(MONTH_NO == 1, YEAR-1,YEAR) - 2000
 
 # FILE PATHS TO UPDATE
-# SAMPLE_PREP_PATH <- "../Sample_Prep_Helper_{MONTH_SHORT}_{YEAR}.xlsx" %>% f_string()
+# SAMPLE_PREP_PATH <- "../Sample_Prep_Helper_{MONTH_SHORT}_{YEAR}.xlsx" %>% f_str()
 # 
-# RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}_{str_pad(MONTH_NO,2,pad="0")}/raw' %>% f_string()
+# RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}_{str_pad(MONTH_NO,2,pad="0")}/raw' %>% f_str()
 # 
-# BASE_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A3.BASE.{PREV_MONTH_SHORT}{PREV_YEAR_SHORT}-cleaned.txt' %>% f_string()
-# SPEND_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A4.SPEND.{PREV_MONTH_SHORT}{PREV_YEAR_SHORT}-cleaned.txt' %>% f_string()
+# BASE_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A3.BASE.{PREV_MONTH_SHORT}{PREV_YEAR_SHORT}-cleaned.txt' %>% f_str()
+# SPEND_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A4.SPEND.{PREV_MONTH_SHORT}{PREV_YEAR_SHORT}-cleaned.txt' %>% f_str()
 # 
 # FILE_LOOKUPS <- "../../../File Lookups"
-# OPEN_SEG_PATH <-       "{FILE_LOOKUPS}/Managed_2022_segment_SAT 06232022.csv"  %>% f_string()
-# SUBJECT_LINE_PATH <-   "{FILE_LOOKUPS}/MarketVoice - Card Lookup20230124_ForAnalytics.csv"  %>% f_string()
-# CENTURION_TIER_PATH <- "{FILE_LOOKUPS}/760_CENTURION_TIER_CVs.csv" %>% f_string()
-# CARD_ART_PATH <-       "{FILE_LOOKUPS}/Card Art URLs 20230124.csv" %>% f_string()
+# OPEN_SEG_PATH <-       "{FILE_LOOKUPS}/Managed_2022_segment_SAT 06232022.csv"  %>% f_str()
+# SUBJECT_LINE_PATH <-   "{FILE_LOOKUPS}/MarketVoice - Card Lookup20230124_ForAnalytics.csv"  %>% f_str()
+# CENTURION_TIER_PATH <- "{FILE_LOOKUPS}/760_CENTURION_TIER_CVs.csv" %>% f_str()
+# CARD_ART_PATH <-       "{FILE_LOOKUPS}/Card Art URLs 20230124.csv" %>% f_str()
 
 # TESTING ABSOLUTE PATHS FOR JANUARY
-SAMPLE_PREP_PATH <- "../Sample_Prep_Helper_{MONTH_SHORT}_{YEAR}.xlsx" %>% f_string()
+SAMPLE_PREP_PATH <- "../Sample_Prep_Helper_{MONTH_SHORT}_{YEAR}.xlsx" %>% f_str()
 
-RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}_{str_pad(MONTH_NO,2,pad="0")}/raw' %>% f_string()
+RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}_{str_pad(MONTH_NO,2,pad="0")}/raw' %>% f_str()
 
-BASE_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A3.BASE.{PREV_MONTH_SHORT}{PREV_YEAR_SHORT}-cleaned.txt' %>% f_string()
-SPEND_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A4.SPEND.{PREV_MONTH_SHORT}{PREV_YEAR_SHORT}-cleaned.txt' %>% f_string()
+BASE_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A3.BASE.{PREV_MONTH_SHORT}{PREV_YEAR_SHORT}-cleaned.txt' %>% f_str()
+SPEND_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A4.SPEND.{PREV_MONTH_SHORT}{PREV_YEAR_SHORT}-cleaned.txt' %>% f_str()
 
-FILE_LOOKUPS <- "L:/Amex.549/Sample/2023/File Lookups" %>% f_string()
-OPEN_SEG_PATH <-       "{FILE_LOOKUPS}/Managed_2022_segment_SAT 06232022.csv"  %>% f_string()
-SUBJECT_LINE_PATH <-   "{FILE_LOOKUPS}/MarketVoice - Card Lookup20230124_ForAnalytics.csv"  %>% f_string()
-CENTURION_TIER_PATH <- "{FILE_LOOKUPS}/760_CENTURION_TIER_CVs.csv" %>% f_string()
-CARD_ART_PATH <-       "{FILE_LOOKUPS}/Card Art URLs 20230124.csv" %>% f_string()
+FILE_LOOKUPS <- "L:/Amex.549/Sample/2023/File Lookups" %>% f_str()
+OPEN_SEG_PATH <-       "{FILE_LOOKUPS}/Managed_2022_segment_SAT 06232022.csv"  %>% f_str()
+SUBJECT_LINE_PATH <-   "{FILE_LOOKUPS}/MarketVoice - Card Lookup20230124_ForAnalytics.csv"  %>% f_str()
+CENTURION_TIER_PATH <- "{FILE_LOOKUPS}/760_CENTURION_TIER_CVs.csv" %>% f_str()
+CARD_ART_PATH <-       "{FILE_LOOKUPS}/Card Art URLs 20230124.csv" %>% f_str()
 
 # Check that a string doesn't match any non-letter
 is_letters_only <- function(x) !grepl("[^A-Za-z]", x)

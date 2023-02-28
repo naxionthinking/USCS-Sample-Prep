@@ -47,7 +47,7 @@ knitr::opts_chunk$set(results = "asis",
 
 ```{r}
 # Load in the generated data sets from the first step (main and augment)
-load(f_string("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))
+load(f_str("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))
 ```
 
 
@@ -74,7 +74,7 @@ cell_no_freq <- combined %>% freq_table("cell_num", "Cell Number Frequency")
 
 ######## FLAG TO FREQ
 message("There are {sum(is.na(combined$raw_fico))} missing values for raw_fico" %>% 
-          f_string())
+          f_str())
 ```
 
 
@@ -734,7 +734,7 @@ final <- final %>% set_names(str_to_upper(names(final))) %>%
 
 
 ```{r}
-final %>% write_csv("../Files_to_send/Amex_760_{MONTH}_{YEAR}_All_Sample_Frame_Information_Qualtrics_{Sys.Date()}.csv" %>% f_string(), na ="")
+final %>% write_csv("../Files_to_send/Amex_760_{MONTH}_{YEAR}_All_Sample_Frame_Information_Qualtrics_{Sys.Date()}.csv" %>% f_str(), na ="")
 
 rm.all.but(keep=c('final'))
 ```

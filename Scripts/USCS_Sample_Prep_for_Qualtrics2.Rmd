@@ -648,11 +648,12 @@ centurion_tiers <- read_csv(CENTURION_TIER_PATH) %>%
   set_names(c('gmpi_base_cust_id', 'CCSG_CENTURION_TIER')) %>%
   distinct(gmpi_base_cust_id, .keep_all = TRUE)
 
-# Merging the dataframes
+# Merging the data frames
 final <- sp135 %>% 
   left_join(centurion_tiers) %>% 
-  full_join(other)
-final <- final %>% set_names(str_to_upper(names(final))) %>% 
+  full_join(other)%>% 
+  arrange(naw_cell_code, marketer_code, spend, tenure_cat) %>% # Sort Data 
+  set_names(str_to_upper(names(.))) %>% 
   dplyr::select(BF_GMPI_BASE_CUST_ID = GMPI_BASE_CUST_ID,
                 FIRST_NM,
                 LAST_NM,

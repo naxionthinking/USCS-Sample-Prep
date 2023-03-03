@@ -38,10 +38,10 @@ pacman::p_load("tidyverse",
 source('Config_and_Helpers.R')
 
 options(scipen = 9999,# Remove scientific notation
-        dplyr.summarise.inform = FALSE)
+        dplyr.summarise.inform = FALSE) #!! Suppress summarise info
 
-knitr::opts_chunk$set(results = "asis",
-                      echo=F)
+knitr::opts_chunk$set(results = "asis", #!! write the text output as is, without nay markups
+                      echo=F)  #!! knitr::opts_chunk$ses global options that apply to every chunk in your file
 ```
 
 
@@ -52,18 +52,18 @@ load(f_str("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))
 
 
 ```{r}
-main <- main %>% mutate(setx = 1)
-augment <- augment %>% mutate(setx = 2)
+main <- main %>% mutate(setx = 1)  #! %>% takes the output of the fn mutate and passes it into main
+augment <- augment %>% mutate(setx = 2)  #! %>% takes the output of the fn mutate and passes it into augment
 
 et_tab <- augment %>% 
-  count(marketer_code, sp_code) %>%
-  spread(marketer_code, n, fill = 0) %>% 
+  count(marketer_code, sp_code) %>% 
+  spread(marketer_code, n, fill = 0) %>%  #!fill = fills missing with 0
   make_nice_table("Augmented Sample Sp Code vs Marketer Code Freqs")
   
 ```
 
 ```{r message=F}
-combined <- full_join(main, augment) %>% 
+combined <- full_join(main, augment) %>%  #! joins 2 tables together
   mutate(cell_num = if_else(setx %in% c(2,3), 
                             str_extract(naw_cell_code, "[0-9]{2}"), NA_character_),
          creative = "")
@@ -93,7 +93,7 @@ message("There are {sum(is.na(combined$raw_fico))} missing values for raw_fico" 
 weight_conditions <- read_excel(SAMPLE_PREP_PATH,
                       sheet = "Weighting_Segments",
                       na = c("", "n/a")) %>% 
-  # Drop empty rows
+  #! Drop rows containing missing values in column sp_code
   drop_na(sp_code)
 
 weight_conditions <- weight_conditions %>% 
@@ -178,7 +178,7 @@ weight_conditions <- weight_conditions %>%
   unite(col = 'full_cond', sp_cond, tenure_cond, spend_cond, naw_cond, 
         sep = " & ", na.rm=TRUE) %>% # Removes any conditions that are not relevant to the given segment
   mutate(full_cond = glue("{full_cond} ~ '{weighting_segment}'")) %>% 
-  arrange(ordering) %>% 
+  arrange(ordering) ##%>% 
   # 
   dplyr::select(weighting_segment, 
                 sp_code, 
@@ -566,7 +566,7 @@ if (nrow(miss_name) > 0){
 ```
 
 ```{r}
-# Fill in the blank names with "Valued Card Member" because First and Last name are now included in the AllSample file
+# Fill in the blank names with "Valued Card Member" because First and Last name are now included in the AllSample file. Also, is first name has more than 10 chars,  replace with "Valued Card" and last name with "Member"
 weighted_sample <- weighted_sample %>% 
   mutate(name_tmp = is.na(first_nm) | is.na(last_nm) | nchar(first_nm) == 10,
     first_nm = if_else(name_tmp,
@@ -736,7 +736,7 @@ final <- final %>% set_names(str_to_upper(names(final))) %>%
 ```{r}
 final %>% write_csv("../Files_to_send/Amex_760_{MONTH}_{YEAR}_All_Sample_Frame_Information_Qualtrics_{Sys.Date()}.csv" %>% f_str(), na ="")
 
-rm.all.but(keep=c('final'))
+rm.all.but(keep=c('final')) #1 remove all files in directoty but 'final'
 ```
 
 

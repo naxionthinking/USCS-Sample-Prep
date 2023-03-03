@@ -44,6 +44,8 @@ SAMPLE_PREP_PATH <- "../Sample_Prep_Helper_{MONTH_SHORT}_{YEAR}.xlsx" %>% f_str(
 
 RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}_{str_pad(MONTH_NO,2,pad="0")}/raw' %>% f_str()
 
+list.files(RAW_FILES_PATH)
+
 BASE_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A3.BASE.{PREV_MONTH_SHORT}{PREV_YEAR_SHORT}-cleaned.txt' %>% f_str()
 SPEND_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A4.SPEND.{PREV_MONTH_SHORT}{PREV_YEAR_SHORT}-cleaned.txt' %>% f_str()
 
@@ -64,7 +66,6 @@ get_first_num <- function(interval) stri_extract_first(interval, regex="[0-9]+")
 get_last_num <- function(interval) stri_extract_last(interval, regex = "[0-9]+")
 
 # Make a nice looking table for the output
-
 make_nice_table <- function(tab, caption){
   
   knitr::kable(tab, format = "html",

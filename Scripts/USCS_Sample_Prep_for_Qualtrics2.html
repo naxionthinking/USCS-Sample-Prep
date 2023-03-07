@@ -11,7 +11,7 @@
 
 
 
-<title>R Notebook</title>
+<title>USCS Prep Sample for Qualtrics 2</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -1619,16 +1619,17 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">R Notebook</h1>
+<h1 class="title toc-ignore">USCS Prep Sample for Qualtrics 2</h1>
 
 </div>
 
 
-<div id="step-3" class="section level2">
-<h2>STEP 3</h2>
+<div id="notes" class="section level3">
+<h3>Notes</h3>
 <ul>
-<li><p>Writes that Augment Sample File</p></li>
-<li><p>Writes the ‘All Sample’ file,</p></li>
+<li><p>Assigns Weighting Segments</p></li>
+<li><p>Creates New Variables</p></li>
+<li><p>Writes the ‘All Sample’ file</p></li>
 <li><p>Starting in January 2013, we only had to send augment sample to
 Research Now,</p></li>
 <li><p>In April 2013, we had to start sending something to Cheetah Mail
@@ -1898,22 +1899,22 @@ NA
 </tbody>
 </table>
 <pre><code>## There are 0 missing values for raw_fico</code></pre>
-<div id="weighting" class="section level3">
-<h3>WEIGHTING</h3>
+</div>
+<div id="assigning-weighting-segments" class="section level3">
+<h3>AssIGNING WEIGHTING SEGMENTS</h3>
 <div id="dynamically-establish-weighting-conditions" class="section level4">
 <h4>Dynamically establish weighting conditions</h4>
 <ul>
-<li><p>This chunk takes in the information from the target weight
-summary</p></li>
-<li><p>It automatically extracts the conditions for the weighting
-segments</p></li>
-<li><p>An example is</p>
+<li>This chunk takes in the information from the target weight
+summary</li>
+<li>It automatically extracts the conditions for the weighting
+segments</li>
+<li>An example is
 <ul>
 <li>If sp_code = 130 &amp; tenure_var <span class="math inline">\(\geq\)</span> 241 &amp; account_spend <span class="math inline">\(\geq\)</span> 1500 THEN
 weighting_segment=‘SP103HTHS’</li>
 </ul></li>
-<li><p>Apply the weighting conditions and generate the segments</p></li>
-<li><p>Verify splits were done correctly</p></li>
+<li>Verify splits were done correctly</li>
 </ul>
 <table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
@@ -24056,7 +24057,7 @@ age
 year_of_birth
 </th>
 <th style="text-align:left;">
-generation2
+generation
 </th>
 </tr>
 </thead>
@@ -24424,7 +24425,7 @@ Silent: 1945 and prior
 1946
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24432,7 +24433,7 @@ Baby Boomers: 1946 – 1964
 1947
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24440,7 +24441,7 @@ Baby Boomers: 1946 – 1964
 1948
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24448,7 +24449,7 @@ Baby Boomers: 1946 – 1964
 1949
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24456,7 +24457,7 @@ Baby Boomers: 1946 – 1964
 1950
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24464,7 +24465,7 @@ Baby Boomers: 1946 – 1964
 1951
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24472,7 +24473,7 @@ Baby Boomers: 1946 – 1964
 1952
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24480,7 +24481,7 @@ Baby Boomers: 1946 – 1964
 1953
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24488,7 +24489,7 @@ Baby Boomers: 1946 – 1964
 1954
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24496,7 +24497,7 @@ Baby Boomers: 1946 – 1964
 1955
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24504,7 +24505,7 @@ Baby Boomers: 1946 – 1964
 1956
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24512,7 +24513,7 @@ Baby Boomers: 1946 – 1964
 1957
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24520,7 +24521,7 @@ Baby Boomers: 1946 – 1964
 1958
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24528,7 +24529,7 @@ Baby Boomers: 1946 – 1964
 1959
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24536,7 +24537,7 @@ Baby Boomers: 1946 – 1964
 1960
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24544,7 +24545,7 @@ Baby Boomers: 1946 – 1964
 1961
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24552,7 +24553,7 @@ Baby Boomers: 1946 – 1964
 1962
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24560,7 +24561,7 @@ Baby Boomers: 1946 – 1964
 1963
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24568,7 +24569,7 @@ Baby Boomers: 1946 – 1964
 1964
 </td>
 <td style="text-align:left;">
-Baby Boomers: 1946 – 1964
+Baby Boomers: 1946 - 1964
 </td>
 </tr>
 <tr>
@@ -24576,7 +24577,7 @@ Baby Boomers: 1946 – 1964
 1965
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24584,7 +24585,7 @@ Generation X: 1965 – 1979
 1966
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24592,7 +24593,7 @@ Generation X: 1965 – 1979
 1967
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24600,7 +24601,7 @@ Generation X: 1965 – 1979
 1968
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24608,7 +24609,7 @@ Generation X: 1965 – 1979
 1969
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24616,7 +24617,7 @@ Generation X: 1965 – 1979
 1970
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24624,7 +24625,7 @@ Generation X: 1965 – 1979
 1971
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24632,7 +24633,7 @@ Generation X: 1965 – 1979
 1972
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24640,7 +24641,7 @@ Generation X: 1965 – 1979
 1973
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24648,7 +24649,7 @@ Generation X: 1965 – 1979
 1974
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24656,7 +24657,7 @@ Generation X: 1965 – 1979
 1975
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24664,7 +24665,7 @@ Generation X: 1965 – 1979
 1976
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24672,7 +24673,7 @@ Generation X: 1965 – 1979
 1977
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24680,7 +24681,7 @@ Generation X: 1965 – 1979
 1978
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24688,7 +24689,7 @@ Generation X: 1965 – 1979
 1979
 </td>
 <td style="text-align:left;">
-Generation X: 1965 – 1979
+Generation X: 1965 - 1979
 </td>
 </tr>
 <tr>
@@ -24696,7 +24697,7 @@ Generation X: 1965 – 1979
 1980
 </td>
 <td style="text-align:left;">
-Older Millennials: 1980 – 1988
+Older Millennials: 1980 - 1988
 </td>
 </tr>
 <tr>
@@ -24704,7 +24705,7 @@ Older Millennials: 1980 – 1988
 1981
 </td>
 <td style="text-align:left;">
-Older Millennials: 1980 – 1988
+Older Millennials: 1980 - 1988
 </td>
 </tr>
 <tr>
@@ -24712,7 +24713,7 @@ Older Millennials: 1980 – 1988
 1982
 </td>
 <td style="text-align:left;">
-Older Millennials: 1980 – 1988
+Older Millennials: 1980 - 1988
 </td>
 </tr>
 <tr>
@@ -24720,7 +24721,7 @@ Older Millennials: 1980 – 1988
 1983
 </td>
 <td style="text-align:left;">
-Older Millennials: 1980 – 1988
+Older Millennials: 1980 - 1988
 </td>
 </tr>
 <tr>
@@ -24728,7 +24729,7 @@ Older Millennials: 1980 – 1988
 1984
 </td>
 <td style="text-align:left;">
-Older Millennials: 1980 – 1988
+Older Millennials: 1980 - 1988
 </td>
 </tr>
 <tr>
@@ -24736,7 +24737,7 @@ Older Millennials: 1980 – 1988
 1985
 </td>
 <td style="text-align:left;">
-Older Millennials: 1980 – 1988
+Older Millennials: 1980 - 1988
 </td>
 </tr>
 <tr>
@@ -24744,7 +24745,7 @@ Older Millennials: 1980 – 1988
 1986
 </td>
 <td style="text-align:left;">
-Older Millennials: 1980 – 1988
+Older Millennials: 1980 - 1988
 </td>
 </tr>
 <tr>
@@ -24752,7 +24753,7 @@ Older Millennials: 1980 – 1988
 1987
 </td>
 <td style="text-align:left;">
-Older Millennials: 1980 – 1988
+Older Millennials: 1980 - 1988
 </td>
 </tr>
 <tr>
@@ -24760,7 +24761,7 @@ Older Millennials: 1980 – 1988
 1988
 </td>
 <td style="text-align:left;">
-Older Millennials: 1980 – 1988
+Older Millennials: 1980 - 1988
 </td>
 </tr>
 <tr>
@@ -24768,7 +24769,7 @@ Older Millennials: 1980 – 1988
 1989
 </td>
 <td style="text-align:left;">
-Younger Millennials: 1989 – 1996
+Younger Millennials: 1989 - 1996
 </td>
 </tr>
 <tr>
@@ -24776,7 +24777,7 @@ Younger Millennials: 1989 – 1996
 1990
 </td>
 <td style="text-align:left;">
-Younger Millennials: 1989 – 1996
+Younger Millennials: 1989 - 1996
 </td>
 </tr>
 <tr>
@@ -24784,7 +24785,7 @@ Younger Millennials: 1989 – 1996
 1991
 </td>
 <td style="text-align:left;">
-Younger Millennials: 1989 – 1996
+Younger Millennials: 1989 - 1996
 </td>
 </tr>
 <tr>
@@ -24792,7 +24793,7 @@ Younger Millennials: 1989 – 1996
 1992
 </td>
 <td style="text-align:left;">
-Younger Millennials: 1989 – 1996
+Younger Millennials: 1989 - 1996
 </td>
 </tr>
 <tr>
@@ -24800,7 +24801,7 @@ Younger Millennials: 1989 – 1996
 1993
 </td>
 <td style="text-align:left;">
-Younger Millennials: 1989 – 1996
+Younger Millennials: 1989 - 1996
 </td>
 </tr>
 <tr>
@@ -24808,7 +24809,7 @@ Younger Millennials: 1989 – 1996
 1994
 </td>
 <td style="text-align:left;">
-Younger Millennials: 1989 – 1996
+Younger Millennials: 1989 - 1996
 </td>
 </tr>
 <tr>
@@ -24816,7 +24817,7 @@ Younger Millennials: 1989 – 1996
 1995
 </td>
 <td style="text-align:left;">
-Younger Millennials: 1989 – 1996
+Younger Millennials: 1989 - 1996
 </td>
 </tr>
 <tr>
@@ -24824,7 +24825,7 @@ Younger Millennials: 1989 – 1996
 1996
 </td>
 <td style="text-align:left;">
-Younger Millennials: 1989 – 1996
+Younger Millennials: 1989 - 1996
 </td>
 </tr>
 <tr>
@@ -28136,12 +28137,10 @@ bdl_fico_bucket
 </tr>
 </tbody>
 </table>
-<pre><code>## SUCCESS: No Fulling missing names</code></pre>
+<pre><code>## SUCCESS: No people with missing first or last names</code></pre>
 <ul>
-<li><p>Fills in the blank names with “Valued Card Member” because First
-and Last name are now included in the AllSample file</p></li>
-<li><p>check if there are records that did not match with the Subject
-line insert file;</p></li>
+<li>check if there are records that did not match with the Subject line
+insert file;</li>
 </ul>
 <pre><code>## SUCCESS: No missing subject line inserts</code></pre>
 <table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
@@ -35087,9 +35086,8 @@ SP158
 </tbody>
 </table>
 <pre><code>       used  (Mb) gc trigger   (Mb)  max used   (Mb)</code></pre>
-<p>Ncells 2140531 114.4 5539647 295.9 5000158 267.1 Vcells 30263550
-230.9 377469813 2879.9 471785041 3599.5</p>
-</div>
+<p>Ncells 2142754 114.5 5542702 296.1 5270358 281.5 Vcells 30266862
+231.0 447812964 3416.6 556830154 4248.3</p>
 </div>
 
 

@@ -11,7 +11,7 @@
 
 
 
-<title>USCS Read Step 1</title>
+<title>USCS Prep Sample for Qualtrics 1</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -1619,7 +1619,7 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">USCS Read Step 1</h1>
+<h1 class="title toc-ignore">USCS Prep Sample for Qualtrics 1</h1>
 
 </div>
 
@@ -1628,6 +1628,8 @@ display: none;
 <h3>Preparatory Steps</h3>
 <p>Consult <code>ReadMe.md</code> for instructions on how to configure
 the inputs properly before running this script</p>
+<p>Remember to update file paths and variables in
+<code>Config_and_Helper.R</code></p>
 </div>
 <div id="notes" class="section level3">
 <h3>Notes</h3>
@@ -1656,6 +1658,129 @@ and report if the warning says to.</p></li>
 </div>
 <div id="data-loading" class="section level3">
 <h3>Data Loading</h3>
+<pre><code>## There were 325,278 observations loaded in for BASE</code></pre>
+<pre><code>## There were 325,278 observations loaded in for SPEND</code></pre>
+<table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+<center>
+<strong> Number of Missing Values per Key Variable </strong>
+</center>
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Variable
+</th>
+<th style="text-align:right;">
+n_missing
+</th>
+<th style="text-align:left;">
+Percent Missing
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+fico_range
+</td>
+<td style="text-align:right;">
+7
+</td>
+<td style="text-align:left;">
+0.0022 %
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+first_nm
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:left;">
+0 %
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+last_nm
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:left;">
+0 %
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+raw_fico
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:left;">
+0 %
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+raw_age
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:left;">
+0 %
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+share_of_wallet_amex
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:left;">
+0 %
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+size_of_wallet
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:left;">
+0 %
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+customer_spend
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:left;">
+0 %
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+account_spend
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:left;">
+0 %
+</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="cell-code-checking" class="section level3">
 <h3>Cell Code Checking</h3>
@@ -2873,16 +2998,11 @@ DROP03
 </div>
 <div id="dma-frequency" class="section level3">
 <h3>DMA Frequency</h3>
-<ol start="12" style="list-style-type: decimal">
-<li><p>Run ReadStep1.sas from line 295 (BestDMA Frequency) to line 300
-(output to ‘DMA Check’) Frequency data gets written into ‘DMA Check’
-columns F &amp; G. Verify that everything got written okay. If all DMAs
-are acceptable, ‘DMA Check’!E215 should say “All Good” and ‘Main
-List’!F37 should say “Okay” If they say something different, resolve the
-problem or note the exception</p>
-<p><strong>I’M NOT WHATS HAPPENING HERE TO BE ABLE TO CODE IT
-UP</strong></p></li>
-</ol>
+<ul>
+<li>Make sure all DMA Codes are valid using the <code>DMA_Checks</code>
+sheet of the sample prep excel file.</li>
+</ul>
+<pre><code>## SUCCESS: No invalid DMAs found in file</code></pre>
 </div>
 <div id="frequency-tables-for-spend-and-tenure" class="section level3">
 <h3>Frequency Tables for Spend and Tenure</h3>
@@ -4230,540 +4350,12 @@ SP158
 <pre><code>## SUCCESS: All observed frequencies of sp codes match requested totals.</code></pre>
 <ul>
 <li>Ensure Requested Sp Codes do not have spending category A.</li>
+<li>Is there anyone with spend &lt;= 0 that shouldn’t be?</li>
+<li>Are there products that can have spend &lt;= 0 that have no
+observations with spend &lt;= 0?</li>
 </ul>
-<table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
-<caption>
-<center>
-<strong> SP Codes vs Spending Category (None should have Category A)
-</strong>
-</center>
-</caption>
-<thead>
-<tr>
-<th style="text-align:left;">
-</th>
-<th style="text-align:right;">
-B
-</th>
-<th style="text-align:right;">
-C
-</th>
-<th style="text-align:right;">
-D
-</th>
-<th style="text-align:right;">
-E
-</th>
-<th style="text-align:right;">
-F
-</th>
-<th style="text-align:right;">
-G
-</th>
-<th style="text-align:right;">
-H
-</th>
-<th style="text-align:right;">
-I
-</th>
-<th style="text-align:right;">
-J
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left;">
-SP111
-</td>
-<td style="text-align:right;">
-2176
-</td>
-<td style="text-align:right;">
-584
-</td>
-<td style="text-align:right;">
-868
-</td>
-<td style="text-align:right;">
-530
-</td>
-<td style="text-align:right;">
-348
-</td>
-<td style="text-align:right;">
-709
-</td>
-<td style="text-align:right;">
-413
-</td>
-<td style="text-align:right;">
-156
-</td>
-<td style="text-align:right;">
-191
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SP112
-</td>
-<td style="text-align:right;">
-1418
-</td>
-<td style="text-align:right;">
-345
-</td>
-<td style="text-align:right;">
-590
-</td>
-<td style="text-align:right;">
-370
-</td>
-<td style="text-align:right;">
-241
-</td>
-<td style="text-align:right;">
-518
-</td>
-<td style="text-align:right;">
-247
-</td>
-<td style="text-align:right;">
-102
-</td>
-<td style="text-align:right;">
-106
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SP113
-</td>
-<td style="text-align:right;">
-5432
-</td>
-<td style="text-align:right;">
-1564
-</td>
-<td style="text-align:right;">
-2546
-</td>
-<td style="text-align:right;">
-1612
-</td>
-<td style="text-align:right;">
-1150
-</td>
-<td style="text-align:right;">
-2613
-</td>
-<td style="text-align:right;">
-1577
-</td>
-<td style="text-align:right;">
-682
-</td>
-<td style="text-align:right;">
-734
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SP114
-</td>
-<td style="text-align:right;">
-2068
-</td>
-<td style="text-align:right;">
-478
-</td>
-<td style="text-align:right;">
-761
-</td>
-<td style="text-align:right;">
-485
-</td>
-<td style="text-align:right;">
-414
-</td>
-<td style="text-align:right;">
-1034
-</td>
-<td style="text-align:right;">
-1005
-</td>
-<td style="text-align:right;">
-690
-</td>
-<td style="text-align:right;">
-1398
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SP115
-</td>
-<td style="text-align:right;">
-3764
-</td>
-<td style="text-align:right;">
-899
-</td>
-<td style="text-align:right;">
-1493
-</td>
-<td style="text-align:right;">
-918
-</td>
-<td style="text-align:right;">
-678
-</td>
-<td style="text-align:right;">
-1450
-</td>
-<td style="text-align:right;">
-1016
-</td>
-<td style="text-align:right;">
-426
-</td>
-<td style="text-align:right;">
-516
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SP117
-</td>
-<td style="text-align:right;">
-658
-</td>
-<td style="text-align:right;">
-162
-</td>
-<td style="text-align:right;">
-217
-</td>
-<td style="text-align:right;">
-113
-</td>
-<td style="text-align:right;">
-79
-</td>
-<td style="text-align:right;">
-116
-</td>
-<td style="text-align:right;">
-50
-</td>
-<td style="text-align:right;">
-13
-</td>
-<td style="text-align:right;">
-16
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SP118
-</td>
-<td style="text-align:right;">
-1026
-</td>
-<td style="text-align:right;">
-302
-</td>
-<td style="text-align:right;">
-362
-</td>
-<td style="text-align:right;">
-244
-</td>
-<td style="text-align:right;">
-150
-</td>
-<td style="text-align:right;">
-290
-</td>
-<td style="text-align:right;">
-173
-</td>
-<td style="text-align:right;">
-62
-</td>
-<td style="text-align:right;">
-75
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SP123
-</td>
-<td style="text-align:right;">
-2121
-</td>
-<td style="text-align:right;">
-724
-</td>
-<td style="text-align:right;">
-1034
-</td>
-<td style="text-align:right;">
-623
-</td>
-<td style="text-align:right;">
-446
-</td>
-<td style="text-align:right;">
-995
-</td>
-<td style="text-align:right;">
-692
-</td>
-<td style="text-align:right;">
-278
-</td>
-<td style="text-align:right;">
-274
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SP127
-</td>
-<td style="text-align:right;">
-2963
-</td>
-<td style="text-align:right;">
-729
-</td>
-<td style="text-align:right;">
-983
-</td>
-<td style="text-align:right;">
-600
-</td>
-<td style="text-align:right;">
-390
-</td>
-<td style="text-align:right;">
-736
-</td>
-<td style="text-align:right;">
-355
-</td>
-<td style="text-align:right;">
-132
-</td>
-<td style="text-align:right;">
-104
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SP132
-</td>
-<td style="text-align:right;">
-19485
-</td>
-<td style="text-align:right;">
-6396
-</td>
-<td style="text-align:right;">
-9185
-</td>
-<td style="text-align:right;">
-5470
-</td>
-<td style="text-align:right;">
-3334
-</td>
-<td style="text-align:right;">
-6313
-</td>
-<td style="text-align:right;">
-2780
-</td>
-<td style="text-align:right;">
-892
-</td>
-<td style="text-align:right;">
-790
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SP136
-</td>
-<td style="text-align:right;">
-333
-</td>
-<td style="text-align:right;">
-76
-</td>
-<td style="text-align:right;">
-178
-</td>
-<td style="text-align:right;">
-127
-</td>
-<td style="text-align:right;">
-79
-</td>
-<td style="text-align:right;">
-304
-</td>
-<td style="text-align:right;">
-256
-</td>
-<td style="text-align:right;">
-146
-</td>
-<td style="text-align:right;">
-198
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SP145
-</td>
-<td style="text-align:right;">
-6307
-</td>
-<td style="text-align:right;">
-1605
-</td>
-<td style="text-align:right;">
-2253
-</td>
-<td style="text-align:right;">
-1184
-</td>
-<td style="text-align:right;">
-722
-</td>
-<td style="text-align:right;">
-1332
-</td>
-<td style="text-align:right;">
-549
-</td>
-<td style="text-align:right;">
-201
-</td>
-<td style="text-align:right;">
-148
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SP153
-</td>
-<td style="text-align:right;">
-51
-</td>
-<td style="text-align:right;">
-13
-</td>
-<td style="text-align:right;">
-32
-</td>
-<td style="text-align:right;">
-20
-</td>
-<td style="text-align:right;">
-19
-</td>
-<td style="text-align:right;">
-32
-</td>
-<td style="text-align:right;">
-26
-</td>
-<td style="text-align:right;">
-11
-</td>
-<td style="text-align:right;">
-12
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SP156
-</td>
-<td style="text-align:right;">
-7714
-</td>
-<td style="text-align:right;">
-2634
-</td>
-<td style="text-align:right;">
-3534
-</td>
-<td style="text-align:right;">
-2035
-</td>
-<td style="text-align:right;">
-1303
-</td>
-<td style="text-align:right;">
-2282
-</td>
-<td style="text-align:right;">
-952
-</td>
-<td style="text-align:right;">
-275
-</td>
-<td style="text-align:right;">
-245
-</td>
-</tr>
-</tbody>
-</table>
-<pre><code>## SUCCESS: No Spend A category found for Sp Codes which should not have that category</code></pre>
-<ul>
-<li>Ensure Minimum Account spend is greater than 0 for the requested Sp
-Codes</li>
-</ul>
-<pre><code>## SUCCESS: Minimum Account spend is greater than zero for all requested Sp codes</code></pre>
-<ul>
-<li><p>Compare:</p>
-<ul>
-<li>A list of all SPCODES in the sample</li>
-<li>A list of all SPCODES in the sample that have any observations with
-Spend = A</li>
-<li>An independent list of SPCODES that should not have spend = A.</li>
-</ul></li>
-<li><p><strong>All records in list 1, should exist in either list 2 or
-list 3; And, not both;</strong></p></li>
-<li><p>Most of these should appear in 2 of the lists [list 1] &amp;
-(list2 or list3) (check_a2)</p></li>
-<li><p>If records appear in all 3 of the lists, that needs to be
-addressed. (Check_a3)</p>
-<ul>
-<li>These will be records with Spend = A, when no ‘$0 spend’ records
-should have been selected</li>
-</ul></li>
-<li><p>If a records appears in only 1 of the lists, that’s an issue that
-should be looked into, but is probably not a problem. (check_a1)</p>
-<ul>
-<li>These should be records that could have someone with Spend = A, but
-didn’t.</li>
-<li>Check the UC and SAT table to make sure that The file at most recent
-folder of <code>L:\Amex.549\Universe Counts CMC-SAT:</code>
-<ul>
-<li><p><code>\pm1\27-610\Sampling-Weighting\UCs\2022</code></p></li>
-<li><p><code>\pm1\27-610\Sampling-Weighting\SAT Files\2022</code></p></li>
-<li><p>Spend = “A” has a very low chance of being selected (low relative
-frequency$0/grand total–5% as cutting edge for post-sub )</p></li>
-</ul></li>
-<li><strong>If someone appears in this case, note and resolve/explain
-the issue</strong></li>
-</ul></li>
-</ul>
-<pre><code>## SUCCESS: All Sp codes are in only two of the lists</code></pre>
+<pre><code>## SUCCESS: All SP Codes who should not have spend &lt;= 0, do not have spend &lt;= 0</code></pre>
+<pre><code>## SUCCESS: All SP Codes who can have spend &lt;= 0, have observations with spend &lt;= 0</code></pre>
 </div>
 <div id="new-open-segment" class="section level3">
 <h3>New Open Segment</h3>
@@ -4963,15 +4555,446 @@ cum_pct
 <pre><code>## SUCCESS: NO Duplicated Customer IDs in New Open Segment File</code></pre>
 <pre><code>## Warning: Customers in the main file appear in the new segment file</code></pre>
 <pre><code>## Less than 3000 main file customers appear in the new segment. Note and explain these customers. No need to report</code></pre>
-<ul>
-<li><p>Runs a frequency of Tenure by each SP code</p>
-<ul>
-<li>Collapses the counts for Tenure of 5+;</li>
-</ul></li>
-<li><p>Generates a count for Early Tenure and Non-Early Tenure</p></li>
-</ul>
-<p>[1] “Count of Early Tenure: 6500” [1] “Count of Non Early Tenure:
-311928”</p>
+<table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+<center>
+<strong> Early vs Non-Early Tenure by SP Code </strong>
+</center>
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+marketer_code
+</th>
+<th style="text-align:right;">
+et
+</th>
+<th style="text-align:right;">
+non_et
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+SP101
+</td>
+<td style="text-align:right;">
+1814
+</td>
+<td style="text-align:right;">
+38108
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP103
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+4101
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP105
+</td>
+<td style="text-align:right;">
+525
+</td>
+<td style="text-align:right;">
+7471
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP106
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+3083
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP108
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+6558
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP110
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+2821
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP111
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+5975
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP112
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+3937
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP113
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+17909
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP114
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+8333
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP115
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+11160
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP117
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1424
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP118
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+2684
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP120
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+2692
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP123
+</td>
+<td style="text-align:right;">
+180
+</td>
+<td style="text-align:right;">
+7007
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP124
+</td>
+<td style="text-align:right;">
+182
+</td>
+<td style="text-align:right;">
+3731
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP125
+</td>
+<td style="text-align:right;">
+932
+</td>
+<td style="text-align:right;">
+17632
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP126
+</td>
+<td style="text-align:right;">
+142
+</td>
+<td style="text-align:right;">
+6918
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP127
+</td>
+<td style="text-align:right;">
+57
+</td>
+<td style="text-align:right;">
+6935
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP129
+</td>
+<td style="text-align:right;">
+35
+</td>
+<td style="text-align:right;">
+1209
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP130
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+8507
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP132
+</td>
+<td style="text-align:right;">
+887
+</td>
+<td style="text-align:right;">
+53758
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP133
+</td>
+<td style="text-align:right;">
+477
+</td>
+<td style="text-align:right;">
+17027
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP136
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1697
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP137
+</td>
+<td style="text-align:right;">
+61
+</td>
+<td style="text-align:right;">
+1156
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP142
+</td>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:right;">
+287
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP145
+</td>
+<td style="text-align:right;">
+31
+</td>
+<td style="text-align:right;">
+14270
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP146
+</td>
+<td style="text-align:right;">
+47
+</td>
+<td style="text-align:right;">
+3459
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP148
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+3728
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP149
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+8703
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP150
+</td>
+<td style="text-align:right;">
+76
+</td>
+<td style="text-align:right;">
+14689
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP153
+</td>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:right;">
+210
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP154
+</td>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:right;">
+49
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP155
+</td>
+<td style="text-align:right;">
+47
+</td>
+<td style="text-align:right;">
+1429
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP156
+</td>
+<td style="text-align:right;">
+281
+</td>
+<td style="text-align:right;">
+20693
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP157
+</td>
+<td style="text-align:right;">
+100
+</td>
+<td style="text-align:right;">
+2125
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SP158
+</td>
+<td style="text-align:right;">
+605
+</td>
+<td style="text-align:right;">
+453
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Total
+</td>
+<td style="text-align:right;">
+6500
+</td>
+<td style="text-align:right;">
+311928
+</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="diagnostic-tests" class="section level3">
 <h3>Diagnostic Tests</h3>
@@ -5524,11 +5547,8 @@ SP158
 </div>
 <div id="augment-checking" class="section level1">
 <h1>Augment Checking</h1>
-<ul>
-<li>Let the Operation’s Manager know the frequency by cell_code</li>
-<li>All OPEN augment sample gets assigned to NPS</li>
-<li>There are no longer any CCSG Augments</li>
-</ul>
+<div id="see-my-note-in-the-email" class="section level3">
+<h3>SEE MY NOTE IN THE EMAIL</h3>
 <p><strong>Check distribution of Augment marketer_code by cell_code.
 Does it align with previous month?</strong> <em>(This may have to be a
 manual check. I can probably pull the distribution from the previous
@@ -5683,18 +5703,16 @@ SP105
 </tr>
 </tbody>
 </table>
-<p>Check the Marketer Codes Frequency for each Augment to make sure they
-align with the previous results (originally specs in ‘Main
-list’!D48:D54)</p>
 <pre><code>## Warning: Customers in the augmented file appear in the new segment file</code></pre>
 <pre><code>## Less than 3000 augmented file customers appear in the new segment. Note and explain these customers. No need to report</code></pre>
+</div>
 <div id="check-the-frequencies-of-the-augment-data" class="section level3">
 <h3>Check the Frequencies of the Augment Data</h3>
 <ul>
 <li><p>Checking expected specs to actual specs for augmented
 data.</p></li>
 <li><p>Expected specs found in <code>Sample_Prep_Helper.xlsx</code>
-sheet <em>Cell_Codes</em></p></li>
+sheet <em>Augment_Specs</em></p></li>
 <li><p>Check tenure category and var Frequency to make sure they align
 with the expected specs</p>
 <ul>
@@ -6059,138 +6077,6 @@ FALSE
 </table>
 <pre><code>## SUCCESS: Minimum spend met for all codes</code></pre>
 <ul>
-<li><p>Check the spend frequency for naw_cell_code=68 to make sure none
-of the SP codes listed on the “SPEND &gt; $0” tab have $0 spend</p>
-<h3 id="im-not-sure-what-this-is-supposed-to-be-doing.-it-looks-like-all-of-the-sp-codes-are-listed-on-the-spend-0-tab.-so-what-this-would-be-checking-is-it-the-code-cell68-has-a-spend-of-0-somewhere.">I’m
-not sure what this is supposed to be doing. It looks like all of the Sp
-codes are listed on the Spend &gt; 0 tab. So what this would be checking
-is it the code CELL68 has a spend of 0 somewhere.</h3></li>
-</ul>
-<pre><code>## Warning in min(account_spend): no non-missing arguments to min; returning Inf</code></pre>
-<pre><code>## Warning in max(account_spend): no non-missing arguments to max; returning -Inf</code></pre>
-<div data-pagedtable="false">
-<script data-pagedtable-source type="application/json">
-{"columns":[{"label":["marketer_code"],"name":[1],"type":["chr"],"align":["left"]},{"label":["n"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["mean"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["sd"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["min"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["max"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
-  </script>
-</div>
-<ul>
-<li>Last set of tables is to see how many people are in error (don’t
-worry about these tables if both of above are checked.</li>
-</ul>
-<table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
-<caption>
-<center>
-<strong> Cell Code Freqs Augmented Data </strong>
-</center>
-</caption>
-<thead>
-<tr>
-<th style="text-align:left;">
-cell_code
-</th>
-<th style="text-align:right;">
-Freq
-</th>
-<th style="text-align:right;">
-pct
-</th>
-<th style="text-align:right;">
-cum_freq
-</th>
-<th style="text-align:right;">
-cum_pct
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left;">
-CNCE14
-</td>
-<td style="text-align:right;">
-2200
-</td>
-<td style="text-align:right;">
-32.12
-</td>
-<td style="text-align:right;">
-2200
-</td>
-<td style="text-align:right;">
-32.12
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-CNDP22
-</td>
-<td style="text-align:right;">
-550
-</td>
-<td style="text-align:right;">
-8.03
-</td>
-<td style="text-align:right;">
-2750
-</td>
-<td style="text-align:right;">
-40.15
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-CNHH21
-</td>
-<td style="text-align:right;">
-450
-</td>
-<td style="text-align:right;">
-6.57
-</td>
-<td style="text-align:right;">
-3200
-</td>
-<td style="text-align:right;">
-46.72
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-CNPL18
-</td>
-<td style="text-align:right;">
-650
-</td>
-<td style="text-align:right;">
-9.49
-</td>
-<td style="text-align:right;">
-3850
-</td>
-<td style="text-align:right;">
-56.20
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-CNPR35
-</td>
-<td style="text-align:right;">
-3000
-</td>
-<td style="text-align:right;">
-43.80
-</td>
-<td style="text-align:right;">
-6850
-</td>
-<td style="text-align:right;">
-100.00
-</td>
-</tr>
-</tbody>
-</table>
-<ul>
 <li><p>This part of the code flags people for deletion for various
 reasons as well as noting any other change. month to month as
 needed.</p></li>
@@ -6204,20 +6090,10 @@ month in order to address various problems.</p></li>
 </ul></li>
 <li><p><strong>THERE WAS NO CODE IN SAS FOR CASE 1</strong></p></li>
 <li><p>All instances with flags will be exported to the
-<code>Tenure_or_Spend_Flagged_{MONTH_SHORT}_{YEAR}.csv</code> in the
+<code>Tenure_or_Spend_Flagged_{MONTH}_{YEAR}.csv</code> in the
 <code>Files_to_send</code> folder</p></li>
 </ul>
 <pre><code>## SUCCESS: No one is flagged for deletion</code></pre>
-<ul>
-<li><p>Assigns everyone to Selected = 0</p></li>
-<li><p>Brings the 4 subsets back together and assigns some extra
-variables</p></li>
-<li><p>Change the definition of subject_line according to this month’s
-instruction</p>
-<ul>
-<li>(see instructions from Ops in part 1 row 6)</li>
-</ul></li>
-</ul>
 <table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
 <center>
@@ -6400,6 +6276,9 @@ cum_pct
 </tr>
 </tbody>
 </table>
+<pre><code>       used  (Mb) gc trigger   (Mb)  max used   (Mb)</code></pre>
+<p>Ncells 3274429 174.9 5490511 293.3 5490511 293.3 Vcells 55500041
+423.5 183641838 1401.1 183267881 1398.3</p>
 </div>
 </div>
 

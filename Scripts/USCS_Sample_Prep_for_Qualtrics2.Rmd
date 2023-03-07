@@ -47,7 +47,7 @@ knitr::opts_chunk$set(results = "asis",
 
 ```{r}
 # Load in the generated data sets from the first step (main and augment)
-load(f_str("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))
+load(f_str("../Data/unweighted_samples_{MONTH}_{YEAR}.Rdata"))
 ```
 
 
@@ -266,7 +266,8 @@ weighted_sample <- weighted_sample %>%
       expo_enroll_in == "S" ~ "8",
       expo_enroll_in == "X" ~ "9",
       expo_enroll_in == "P" ~ "10",
-      expo_enroll_in == "" ~ ""),
+      expo_enroll_in == "" ~ "",
+      TRUE ~ "REF"),
     
     bf_myca_flg = case_when(
       myca_flag == "" ~ "",
@@ -654,6 +655,7 @@ final <- sp135 %>%
   full_join(other)%>% 
   arrange(naw_cell_code, marketer_code, spend, tenure_cat) %>% # Sort Data 
   set_names(str_to_upper(names(.))) %>% 
+  # Choose only desired variables and name them how we want them named
   dplyr::select(BF_GMPI_BASE_CUST_ID = GMPI_BASE_CUST_ID,
                 FIRST_NM,
                 LAST_NM,
@@ -735,7 +737,8 @@ final <- sp135 %>%
 
 
 ```{r}
-final %>% write_csv("../Files_to_send/Amex_760_{MONTH}_{YEAR}_All_Sample_Frame_Information_Qualtrics_{Sys.Date()}.csv" %>% f_str(), na ="")
+MONTH_LONG <- month.name[MONTH_NO] # e.g. "January"
+final %>% write_csv("../Files_to_send/Amex_760_{MONTH_LONG}_{YEAR}_All_Sample_Frame_Information_Qualtrics_{Sys.Date()}.csv" %>% f_str(), na ="")
 
 rm.all.but(keep=c('final'))
 ```

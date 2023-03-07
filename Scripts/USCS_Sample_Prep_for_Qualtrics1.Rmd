@@ -13,6 +13,9 @@ editor_options:
 Consult `ReadMe.md` for instructions on how to configure the inputs
 properly before running this script
 
+
+Remember to update file paths and variables in `Config_and_Helper.R`
+
 ### Notes
 
 -   As a heads up we tripled the recommended amount for SP 133.
@@ -52,7 +55,7 @@ source('Config_and_Helpers.R')
 options(scipen = 99999, # Remove scientific notation
         dplyr.summarise.inform = FALSE) # Remove summarize messages
 
-knitr::opts_chunk$set(results = "asis", # Prints 
+knitr::opts_chunk$set(results = "asis", # Prints html tables nicely
                       echo=FALSE) # Don't show any code chunks in the output
 ```
 
@@ -61,7 +64,32 @@ knitr::opts_chunk$set(results = "asis", # Prints
 ```{r Load in base and spend dataframes}
 all_base <- load_base() 
 all_spend <- load_spend()
+
+f_str("There were {format(nrow(all_base), big.mark = ',')} observations loaded in for BASE") %>% message()
+f_str("There were {format(nrow(all_spend),big.mark = ',')} observations loaded in for SPEND") %>% message()
 ```
+
+```{r Missing Value Summary}
+# Variables to summarize number of missing values
+miss_vars <- c("first_nm", 
+               'last_nm',
+               "raw_fico",
+               "fico_range",
+               "raw_age",
+               "share_of_wallet_amex",
+               "size_of_wallet",
+               "customer_spend",
+               "account_spend")
+
+# Number and Percent of missing values for key variables
+miss_vals <- all_base %>%
+  select(all_of(miss_vars)) %>%
+  summarise_all(~sum(is.na(.))) %>%
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "n_missing") %>%
+  mutate("Percent Missing" = paste0(round(n_missing / nrow(all_base) * 100, 4), " %")) %>% 
+  arrange(desc(n_missing)) %>% make_nice_table("Number of Missing Values per Key Variable")
+```
+
 
 ```{r Filtering base and spend}
 # Change these monthly based on OPS instructions
@@ -209,7 +237,7 @@ main_code_freq <- all_base %>%
 
 # Write to csv to send to OPS Manager 
 main_code_freq %>%  
-  write_csv(f_str("../Files_to_send/Main_Code_Freqs_{MONTH_SHORT}_{YEAR}.csv")) 
+  write_csv(f_str("../Files_to_send/Main_Code_Freqs_{MONTH}_{YEAR}.csv")) 
 ```
 
 ```{r}
@@ -226,7 +254,7 @@ cell_code_freq <- cell_code_freq %>%
 
 # Save file to be sent to PM
 cell_code_freq %>% 
-  write_csv(f_str("../Files_to_send/Cell_Code_Freqs_{MONTH_SHORT}_{YEAR}.csv"))
+  write_csv(f_str("../Files_to_send/Cell_Code_Freqs_{MONTH}_{YEAR}.csv"))
 
 ccf <- cell_code_freq %>% 
   make_nice_table("Cell Code Frequencies with NAW Cell Codes")
@@ -306,8 +334,7 @@ all <- inner_join(all_base, all_spend, by = "gmpi_base_cust_id") %>%
            TRUE ~ 10),
          
          spend = case_when(
-           account_spend <     0 ~ "A",
-           account_spend ==    0 ~ "A",
+           account_spend <=    0 ~ "A",
            account_spend <  1500 ~ "B",
            account_spend <  2500 ~ "C",
            account_spend <  5000 ~ "D",
@@ -342,8 +369,8 @@ if (nrow(all) != nrow(all_base)){
 
 ```{r}
 # Save datasets and remove from memory
-all_base %>% write_csv("../Data/all_base_{MONTH_SHORT}_{YEAR}.csv" %>% f_str())
-all_spend %>% write_csv("../Data/all_spend_{MONTH_SHORT}_{YEAR}.csv" %>% f_str())
+all_base %>% write_csv("../Data/all_base_{MONTH}_{YEAR}.csv" %>% f_str())
+all_spend %>% write_csv("../Data/all_spend_{MONTH}_{YEAR}.csv" %>% f_str())
 #rm(all_base, all_spend) 
 ```
 
@@ -458,13 +485,12 @@ if (sum(check_sp_codes$difference) > 0){
 ```
 
 -   Ensure Requested Sp Codes do not have spending category A.
+  - Is there anyone with spend <= 0 that shouldn’t be?
+  - Are there products that can have spend <= 0 that have no observations with spend <= 0?
+
 
 ```{r}
-sp_code_a <- main[main$spend == "A",]$marketer_code %>% unique()
-  #freq_table("marketer_code") # This is in the SAS code but doesnt seem necessary
-
-# The spcodes codes below should not have SPEND = A;
-# /* SP 156 added in JULY 2018 */
+# The sp codes below should not have SPEND <= 0;
 sp_code_no_a <- c("SP111",
                   "SP112",
                   "SP113",
@@ -478,115 +504,40 @@ sp_code_no_a <- c("SP111",
                   "SP136",
                   "SP145",
                   "SP153",
-                  "SP156")
+                  "SP156") # SP 156 added in JULY 2018
 
-# Verifying that Sp codes that should not have spending cateogry "A" do not have spending code "A"
-main_sp_codes_spend <- main %>% filter(marketer_code %in% sp_code_no_a)
-main_sp_codes_spend_ct <- table(main_sp_codes_spend$marketer_code,
-                                main_sp_codes_spend$spend) %>% 
-  make_nice_table("SP Codes vs Spending Category (None should have Category A)")
-```
+# Sp codes that are allowed to have no or negative spend
+sp_code_a <- main$marketer_code[!main$marketer_code %in% sp_code_no_a] %>% unique()
 
-```{r}
-tab <- main_sp_codes_spend_ct %>% as.data.frame() %>% 
-  set_names(c("sp_code","spend", "Freq"))
+# Sp codes observed to have spend <= 0
+obs_sp_code_a <- main[main$spend == "A",]$marketer_code %>% unique()
 
-if ("A" %in% tab$spend) {
-  bad_sp_code_a <- tab$sp_code[tab$spend == "A"]
-  for (code in bad_sp_code_a) {
-    warning("Spending category A found in Sp Code: {code}" %>% f_str())
+# Identify if sp codes that should not have no spend have no spend
+wrong_no_spends <- sp_code_no_a[sp_code_no_a %in% obs_sp_code_a]
+
+# Identify if sp_codes that can have no spend have observation with no spend
+missing_no_spends <- sp_code_a[!sp_code_a %in% obs_sp_code_a]
+
+if (length(wrong_no_spends) > 0) {
+  for (code in wrong_no_spends) {
+    warning("Sp Code: {code} has spend <= 0 when it should not" %>% f_str())
     cat("\n")}
+  warning("Alert Operations for confirmation to exclude them") # This is not in the code and would need to be added
 } else{
-  message("SUCCESS: No Spend A category found for Sp Codes which should not have that category")
-}
-```
+  message("SUCCESS: All SP Codes who should not have spend <= 0, do not have spend <= 0")
+} 
 
--   Ensure Minimum Account spend is greater than 0 for the requested Sp
-    Codes
 
-```{r}
-# Determine which sp codes have a minimum spend greater than 0
-min_acct_spend_a <- main_sp_codes_spend %>% 
-  group_by(marketer_code) %>% 
-  summarize(min_spend = min(account_spend)) %>% 
-  mutate(spend_zero = !(min_spend > 0)) # min spend not greater than 0
-
-if (sum(min_acct_spend_a$spend_zero > 0)){
-  bad_min_spend <- min_acct_spend_a$marketer_code[min_acct_spend_a$spend_zero]
-    for (code in bad_min_spend) {
-      warning("Minimum Account spend is not greater than zero for requested Sp Code: {code}" %>% f_str())
-      cat("\n")}
+if (length(missing_no_spends) > 0) {
+  for (code in missing_no_spends) {
+    warning("Sp Code: {code} has no observations spend <= 0 when it is allowed too" %>% f_str())
+    cat("\n")}
+  warning("Check the UC file to see what proportion of the pre and post suppression counts are for $0 spend on that product.  Given the sample request, how likely is it that we received no $0 spenders? If it seems unreasonable, you should discuss the matter with operations")
 } else{
-  message("SUCCESS: Minimum Account spend is greater than zero for all requested Sp codes")
-}
-
+  message("SUCCESS: All SP Codes who can have spend <= 0, have observations with spend <= 0")
+} 
 ```
 
--   Compare:
-
-    -   A list of all SPCODES in the sample
-    -   A list of all SPCODES in the sample that have any observations with
-        Spend = A
-    -   An independent list of SPCODES that should not have spend = A.
-
--   **All records in list 1, should exist in either list 2 or list 3; And,
-    not both;**
-
--   Most of these should appear in 2 of the lists [list 1] & (list2 or
-    list3) (check_a2)
-
--   If records appear in all 3 of the lists, that needs to be addressed.
-    (Check_a3)
-
-    -   These will be records with Spend = A, when no '\$0 spend' records
-        should have been selected
-
--   If a records appears in only 1 of the lists, that's an issue that
-    should be looked into, but is probably not a problem. (check_a1)
-
-    -   These should be records that could have someone with Spend = A, but
-        didn't.
-    -   Check the UC and SAT table to make sure that The file at most
-        recent folder of `L:\Amex.549\Universe Counts CMC-SAT:`
-        -   `\pm1\27-610\Sampling-Weighting\UCs\2022`
-
-        -   `\pm1\27-610\Sampling-Weighting\SAT Files\2022`
-
-        -   Spend = "A" has a very low chance of being selected (low
-            relative frequency\$0/grand total--5% as cutting edge for
-            post-sub )
-    -   **If someone appears in this case, note and resolve/explain the
-        issue**
-
-```{r}
-check_a <- data.frame(sp_code = unique(c(sp_code_a,
-                                         sp_code_no_a, 
-                                         main_sp_codes$marketer_code))) %>% 
-  # Determine which list each sp code is in
-  mutate(sp_code_a = sp_code %in% sp_code_a,
-         sp_code_no_a = sp_code %in% sp_code_no_a,
-         sp_code_main = sp_code %in% main_sp_codes$marketer_code,
-         # Check how many lists the code is in
-         sp_code_check = sp_code_a + sp_code_no_a + sp_code_main)
-
-check_a1 <- check_a[check_a$sp_code_check == 1,'sp_code']
-check_a2 <- check_a[check_a$sp_code_check == 2,'sp_code']
-check_a3 <- check_a[check_a$sp_code_check == 3,'sp_code']
-
-if (length(check_a2) == nrow(check_a)){ # Everything should be in check2
-  message("SUCCESS: All Sp codes are in only two of the lists")
-} else if (length(check_a1) > 0 ){
-    for (code in check_a1) {
-      warning("Sp Code: {code} is only in one of the lists. Look at description above for what to do" %>% f_str())
-      cat("\n")}
-  warning("")
-} else if (length(check_a3) > 0 ){
-    for (code in check_a3) {
-      warning("Sp Code: {code} is in all three lists" %>% f_str())
-      cat("\n")}
-    warning("Look at description above for what to do")
-}
-```
 
 ### New Open Segment
 
@@ -648,9 +599,9 @@ if (nrow(open_seg_check) > 0){
   message("SUCCESS: No main file customers appear in the new segment")
 }
 ```
--   Generates a count for Early Tenure and Non-Early Tenure
 
 ```{r }
+# Generate count for early and non-early tenure
 et_tab <- main %>% 
   count(marketer_code, tenure_cat) %>%
   spread(tenure_cat, n, fill = 0)
@@ -682,12 +633,11 @@ main <- main %>% mutate(selected = 0,
                           mv_nps_ind = if_else(selected == 0, "NPS", "MV"),
                           mr_in_n = if_else(mr_in == 'Y', 1, 2),
                           subject_line = if_else(selected == 0, 6, 7))
-
 ```
 
 ```{r }
-write_csv(all, "../Data/all_{MONTH_SHORT}_{YEAR}.csv" %>% f_str())
-write_csv(main, "../Data/main_{MONTH_SHORT}_{YEAR}.csv" %>% f_str())
+write_csv(all, "../Data/all_{MONTH}_{YEAR}.csv" %>% f_str())
+write_csv(main, "../Data/main_{MONTH}_{YEAR}.csv" %>% f_str())
 ```
 
 ```{r}
@@ -701,8 +651,7 @@ if (mr_in_ct[1,1] == 0 & mr_in_ct[2,2] == 0){
 
 # Augment Checking
 
--   Let the Operation's Manager know the frequency by cell_code
--   All OPEN augment sample gets assigned to NPS
+### SEE MY NOTE IN THE EMAIL
 
 **Check distribution of Augment marketer_code by cell_code. Does it align
 with previous month?** *(This may have to be a manual check. I can probably
@@ -716,27 +665,6 @@ augment <- augment %>% filter(!marketer_code %in% c("", "SP138", "SP139")) %>%
 cell_code_naw_sp_ct <- augment %>% 
   freq_table(c("naw_cell_code", "cell_code", "marketer_code"), 
              caption="Naw Cell Code vs Cell Code vs Sp Code Frequencies")
-
-```
-
-Check the Marketer Codes Frequency for each Augment to make sure they align
-with the previous months results
-
-```{r}
-
-cc_aug_freq <- cell_code_freq %>%
-  filter(str_detect(naw_cell_code, "Augment")) %>% 
-  dplyr::select(cell_code, Freq) %>% 
-  full_join(cell_code_naw_sp_ct[,c("cell_code", "Freq")], 
-            by = "cell_code") %>% 
-  mutate(diff = Freq.x != Freq.y) %>% make_nice_table("Marketer Code Freqs")
-
-
-if (sum(cc_aug_freq$diff) > 0){
-  warning("Frequencies of marketer codes in augmented dataset do not match")
-} else{
-  message("SUCCESS: Frequencies of marketer codes in augmented dataset match")
-}
 ```
 
 ```{r}
@@ -850,16 +778,16 @@ if (sum(acct_spend_ncc_check$bad_spend) > 0){
 
     -   2 = Delete because High Tenure in Augment
 
-    -   3 = Delete because Spend not \> \$0 in Augment
+    -   3 = Delete because Spend not > $0 in Augment
 
 -   **THERE WAS NO CODE IN SAS FOR CASE 1**
 
 -   All instances with flags will be exported to the
-    `Tenure_or_Spend_Flagged_{MONTH_SHORT}_{YEAR}.csv` in the
+    `Tenure_or_Spend_Flagged_{MONTH}_{YEAR}.csv` in the
     `Files_to_send` folder
 
 ```{r FLAG DELETION}
-flag <- augment %>% 
+augment <- augment %>% 
   mutate(
     flag_to = case_when(
       # Tenure Checks
@@ -891,49 +819,45 @@ flag <- augment %>%
   ) %>% arrange(flag_to)
 
 
-flags_only <- flag %>% filter(!is.na(flag_to)) %>% 
+# identify flagged observations
+flags_only <- augment %>% drop_na(flag_to) %>% 
   dplyr::select(gmpi_base_cust_id, naw_cell_code, tenure_var, 
                       account_spend, marketer_code, setup_dt, flag_to) 
 
 flags_only %>% 
-  write_csv("../Files_to_send/Tenure_or_Spend_Flagged_{MONTH_SHORT}_{YEAR}.csv" %>%
-              f_str())
+  write_csv(f_str("../Files_to_send/Tenure_or_Spend_Flagged_{MONTH}_{YEAR}.csv"))
 
 n_flags <- nrow(flags_only)
 if (n_flags > 0){
   warning("There are {n_flags} people flagged for deletion" %>% f_str())
   cat("\n")
-  warning("Find specifics in file `Tenure_or_Spend_Flagged_{MONTH_SHORT}_{YEAR}.csv` in the Files_to_send folder" %>% f_str())
+  warning("Find specifics in file `Tenure_or_Spend_Flagged_{MONTH}_{YEAR}.csv` in the Files_to_send folder" %>% f_str())
   
-  flag_freqs <- flags_only %>% freq_table("flag_to",
-                            "Flag Freqs")
-  
-  
+  flag_freqs <- flags_only %>% freq_table("flag_to", "Flag Freqs")
 } else{
   message("SUCCESS: No one is flagged for deletion")
 }
 ```
 
--   Assigns everyone to Selected = 0
+```{r Remove Flagged Observations}
 
--   Brings the 4 subsets back together and assigns some extra variables
+# If approved, run this line to remove the flagged observations
+augment <- augment %>% filter(is.na(flag_to))
+```
 
--   Change the definition of subject_line according to this month's
-    instruction
-
-    -   (see instructions from Ops in part 1 row 6)
 
 ```{r SUBJECT LINE}
-augment <- flag %>% 
-  mutate(selected = 0,
-         sp_code = str_extract(marketer_code, "[0-9]{3}") %>% 
-                            as.numeric(),
-                           # Extract drop code (i.e. 1 from DROP 01)
-                          drop_code = 1,
-                          mv_nps_ind = if_else(selected == 0, "NPS", "MV"),
-                          mr_in_n = if_else(mr_in == 'Y', 1, 2),
-                          subject_line = if_else(selected == 0, 6, 7))
-
+# perform ab split (if desired)
+# makes new variables based on split
+augment <- augment %>% 
+  #create_ab_split(strat_var = 'marketer_code', sample_size = 0.5) %>% # Stratify sample 50% of obs for each marketer code
+  mutate(selected = 0) %>% # comment this out if using the ab_split
+  mutate(sp_code = parse_number(marketer_code),
+         drop_code = 1, # THIS IS NEVER USED?
+         mv_nps_ind = if_else(selected == 0, "NPS", "MV"),
+         mr_in_n = if_else(mr_in == 'Y', 1, 2),
+         subject_line = if_else(selected == 0, 6, 7)) %>% # Change the definition of subject_line according to this month's instruction
+  select(-flag_to)
 ncc_mv_nps <- augment %>% freq_table(c("naw_cell_code", "mv_nps_ind"),
                           "naw cell code vs MV NPS IND Freqs")
 ```
@@ -945,11 +869,11 @@ sel_sbj_line <- augment %>%
 
 ```{r}
 # Store important sample datasets for weighting step
-save(augment, main, file=f_str("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))
+save(augment, main, file=f_str("../Data/unweighted_samples_{MONTH}_{YEAR}.Rdata"))
 ```
 
 ```{r message=FALSE}
-# IF YOU ARE RUNNING `USCS_Weighting.Rmd` right after this, run this chunk and then you DO NOT have to reload in the data with the step `load(f_str("../Data/unweighted_samples_{MONTH_SHORT}_{YEAR}.Rdata"))`
+# IF YOU ARE RUNNING `USCS_Weighting.Rmd` right after this, run this chunk and then you DO NOT have to reload in the data with the step `load(f_str("../Data/unweighted_samples_{MONTH}_{YEAR}.Rdata"))`
 # There's no harm if you do, but the dataframes you need will stay in your environment
 
 rm.all.but(keep = c('main', 'augment'))

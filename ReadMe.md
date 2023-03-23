@@ -56,7 +56,7 @@ git checkout -b USCS_Feb_2023
 6. Now establish the connection with github. If you have not authenticated github previously, you will have to do so after running this line (a log in will pop up). Remeber to replace \<Month> and \<Year>
 
 ```
-git branch --set-upstream-to origin/USCS_<Month>_<Year>
+git push --set-upstream origin USCS_<Month>_<Year>
 ```
 
 1.  Now you can make any edits you want to the new files

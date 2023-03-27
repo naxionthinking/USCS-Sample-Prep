@@ -25,7 +25,7 @@ editor_options:
 -   In 2015 Cheetah Mail file started to get sent to Salesforce
 
 
-```{r Load in Packages, message=F, warning=F, echo=F}
+```{r Load in Packages, message=F, warning=F}
 if (!require("pacman")) install.packages("pacman")
 
 # Loads in necessary packages, and installs them if you don't have them installed
@@ -40,8 +40,7 @@ source('Config_and_Helpers.R')
 options(scipen = 9999,# Remove scientific notation
         dplyr.summarise.inform = FALSE)
 
-knitr::opts_chunk$set(results = "asis",
-                      echo=F)
+knitr::opts_chunk$set(results = "asis")
 ```
 
 

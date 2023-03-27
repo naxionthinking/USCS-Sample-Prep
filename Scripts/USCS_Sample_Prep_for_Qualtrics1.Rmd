@@ -40,7 +40,7 @@ Remember to update file paths and variables in `Config_and_Helper.R`
 
 ### Dependencies
 
-```{r Load in Packages, message=FALSE, warning=FALSE, echo=FALSE}
+```{r Load in Packages, message=FALSE, warning=FALSE}
 if (!require("pacman")) install.packages("pacman")
 
 # Loads in necessary packages, and installs them if you don't have them installed
@@ -56,7 +56,7 @@ options(scipen = 99999, # Remove scientific notation
         dplyr.summarise.inform = FALSE) # Remove summarize messages
 
 knitr::opts_chunk$set(results = "asis", # Prints html tables nicely
-                      echo=FALSE) # Don't show any code chunks in the output
+                      echo=TRUE) # Show all code chunks in the output
 ```
 
 ### Data Loading
@@ -853,7 +853,6 @@ augment <- augment %>%
   #create_ab_split(strat_var = 'marketer_code', sample_size = 0.5) %>% # Stratify sample 50% of obs for each marketer code
   mutate(selected = 0) %>% # comment this out if using the ab_split
   mutate(sp_code = parse_number(marketer_code),
-         drop_code = 1, # THIS IS NEVER USED?
          mv_nps_ind = if_else(selected == 0, "NPS", "MV"),
          mr_in_n = if_else(mr_in == 'Y', 1, 2),
          subject_line = if_else(selected == 0, 6, 7)) %>% # Change the definition of subject_line according to this month's instruction

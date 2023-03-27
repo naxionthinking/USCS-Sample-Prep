@@ -36,11 +36,11 @@ SAMPLE_PREP_PATH <- "../Sample_Prep_Helper_{MONTH}_{YEAR}.xlsx" %>% f_str()
 RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}_{str_pad(MONTH_NO,2,pad="0")}/raw' %>% f_str() 
 
 ## Paste in the name of the base and spend text files after the "/"
-BASE_PATH <- '{RAW_FILES_PATH}/' %>% f_str()
-SPEND_PATH <- '{RAW_FILES_PATH}/' %>% f_str()
+BASE_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A3.BASE.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt' %>% f_str() # LET.NATLANAL.X80A3.BASE.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt
+SPEND_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A4.SPEND.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt' %>% f_str() # LET.NATLANAL.X80A4.SPEND.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt
 
 ## This uses relative paths to find the file lookups folder. Theoretically, it should always be 3 folders back, but change if not
-FILE_LOOKUPS <- "../../../File Lookups" %>% f_str()
+FILE_LOOKUPS <- 'L:/Amex.549/Sample/2023/File Lookups' #"../../../File Lookups" %>% f_str() # L:/Amex.549/Sample/2023/File Lookups
 
 ## Change file names if they change
 OPEN_SEG_PATH <-       "{FILE_LOOKUPS}/Managed_2022_segment_SAT 06232022.csv"  %>% f_str()

@@ -140,7 +140,7 @@ The `Sample_Prep_Helper_MONTH_YEAR.xlsx` contains 4 sheets :
 
 1.  *Augment_Specs*
 
-This sheet rarely changes. The information comes from the *Segmentation Criteria* sheet of the `MONTH_YEAR_MainFileBuildAugments_NA.xlsx` file which can be found in the `requests` folder of the job drive for the current month. Make sure the tenure is reported in this sheet in months and not days. 
+This sheet rarely changes. The information comes from the *Segmentation Criteria* sheet of the `MONTH_YEAR_MainFileBuildAugments_NA.xlsx` file which can be found in the `requests` folder of the job drive for the current month. Make sure the tenure is reported in this sheet in months and not days. **NOTE THAT THE SEGMENTATION CRITERIA SHEET IS INCORRECT FOR CELL14, AND IT SHOULD BE "Any Spend" BECAUSE IT IS A PAYING CARD.**
 
 <center>
 

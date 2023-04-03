@@ -40,7 +40,8 @@ source('Config_and_Helpers.R')
 options(scipen = 9999,# Remove scientific notation
         dplyr.summarise.inform = FALSE)
 
-knitr::opts_chunk$set(results = "asis")
+knitr::opts_chunk$set(results = "asis",
+                      echo=TRUE)
 ```
 
 
@@ -198,10 +199,11 @@ weighted_sample <- combined %>%
 - Verify splits were done correctly
 
 ```{r}
-# Mean of account_spend by weighting_segment
+# Summary Stats by weighted segment
 weight_tab <- weighted_sample %>% 
   group_by(weighting_segment) %>%
-  summarize(n = n(),
+  summarize(sp_codes = paste(unique(marketer_code), collapse = ","),
+            n = n(),
             mean_spend = mean(account_spend),
             sd_spend = sd(account_spend),
             min_spend = min(account_spend),
@@ -217,6 +219,14 @@ weight_tab <- weighted_sample %>%
 weights_ncc_sp_code <- weighted_sample %>%
   freq_table(c('naw_cell_code', 'weighting_segment', 'sp_code'), 
              "Cross-tab of naw_cell_code, weighting_segment, and sp_code")
+
+# MAKE SURE ALL OBSERVATIONS HAVE A WEIGHTING SEGMENT
+# IF NOT, IDENTIFY WHAT HAPPENED IN JIM'S WEIGHTING FILE
+unweighted <- weight_tab %>% filter(is.na(weighting_segment))
+if (nrow(unweighted) > 0){
+  warning("There are observations that fall into no weighting segment category. THIS SHOULD NOT HAPPEN")
+  unweighted_sum <- unweighted %>% make_nice_table("UNWEIGHTED OBSERVATIONS")
+}
 ```
 
 #### Create New Variables
@@ -272,7 +282,7 @@ weighted_sample <- weighted_sample %>%
       myca_flag == "" ~ "",
       myca_flag == "Y" ~ "1",
       myca_flag == "N" ~ "2",
-      TRUE ~ "REF"),
+      TRUE ~ "R"), # This should be REF but SAS cut it short so Qualtrics expects an R
     
     bf_mr_in = case_when(mr_in == "" ~ "",
                          mr_in == "Y" ~ "1",
@@ -288,7 +298,7 @@ weighted_sample <- weighted_sample %>%
     cv_cs_et_type = case_when(
       # Ops asked that SP code 158, new in Jan 2023, be called early tenure 
       # even though tenure_var values exceed 4 see email from Hunter 1/3/23*/
-      marketer_code == "SP158" ~ 1, 
+      #marketer_code == "SP158" ~ 1, # Removed Q1 2023 
       tenure_var >= 2 & tenure_var <= 4  ~ 1,
       tenure_var >= 5 & tenure_var <= 15 ~ 2,
       TRUE ~ 3),
@@ -633,7 +643,11 @@ sp_sv_card_freq <- weighted_sample %>%
 weighted_sample <- weighted_sample %>% 
   mutate(across(c("setup_dt",
                   'card_anniv_dt',
-                  'mr_init_enroll_dt'), ~format(as.Date(.x), format = "%m/%d/%Y")))
+                  'mr_init_enroll_dt'), ~format(as.Date(.x), format = "%m/%d/%Y")),
+         # We need to remove leading zeros in months and days
+         across(c("setup_dt",
+                  'card_anniv_dt',
+                  'mr_init_enroll_dt'), ~gsub("^0", "", gsub("/0", "/", .))))
 ```
 
 
@@ -730,10 +744,22 @@ final <- sp135 %>%
                 CV_Generation_New = GENERATION,
                 BDL_FICO_BUCKET,
                 SV_SUBJECT_LINE_INSERT,
-                SV_CARD_ART,
-                CUST_ACQ_CODE)
+                SV_CARD_ART)
 ```
 
+```{r}
+# Final rounding to get the data in the format that Qualtrics is expecting
+final <- final %>% mutate(
+         BF_GMPI_BASE_CUST_ID = substr(BF_GMPI_BASE_CUST_ID, 5, 19), # We only want 15 digits
+         across(c("BF_ACCOUNT_SPEND",
+                  'BF_SIZE_OF_WALLET',
+                  'BF_SHARE_OF_WALLET_AMEX',
+                  'BF_CUSTOMER_SPEND',
+                  "BDL_AGE",
+                  "SV_PRODUCT_TENURE"), ~round(., 2)),
+         CV_BF_ACCOUNT_SHARE_OF_WALLET = round(CV_BF_ACCOUNT_SHARE_OF_WALLET, 14)
+)
+```
 
 ```{r}
 MONTH_LONG <- month.name[MONTH_NO] # e.g. "January"

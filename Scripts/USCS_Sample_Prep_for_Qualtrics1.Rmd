@@ -237,7 +237,7 @@ main_code_freq <- all_base %>%
 
 # Write to csv to send to OPS Manager 
 main_code_freq %>%  
-  write_csv(f_str("../Files_to_send/Main_Code_Freqs_{MONTH}_{YEAR}.csv")) 
+  write_csv(f_str("../Files_to_send/Main_Code_Freqs_{MONTH}_{YEAR}.csv"), na ="") 
 ```
 
 ```{r}
@@ -254,7 +254,7 @@ cell_code_freq <- cell_code_freq %>%
 
 # Save file to be sent to PM
 cell_code_freq %>% 
-  write_csv(f_str("../Files_to_send/Cell_Code_Freqs_{MONTH}_{YEAR}.csv"))
+  write_csv(f_str("../Files_to_send/Cell_Code_Freqs_{MONTH}_{YEAR}.csv"), na ="")
 
 ccf <- cell_code_freq %>% 
   make_nice_table("Cell Code Frequencies with NAW Cell Codes")
@@ -369,9 +369,9 @@ if (nrow(all) != nrow(all_base)){
 
 ```{r}
 # Save datasets and remove from memory
-all_base %>% write_csv("../Data/all_base_{MONTH}_{YEAR}.csv" %>% f_str())
-all_spend %>% write_csv("../Data/all_spend_{MONTH}_{YEAR}.csv" %>% f_str())
-#rm(all_base, all_spend) 
+all_base %>% write_csv("../Data/all_base_{MONTH}_{YEAR}.csv" %>% f_str(), na ="")
+all_spend %>% write_csv("../Data/all_spend_{MONTH}_{YEAR}.csv" %>% f_str(), na ="")
+#rm(all_base, all_spend) # Uncomment this to remove all_base and all_spend
 ```
 
 ### Checking for Duplicate Keys in Merged Data frame
@@ -636,8 +636,8 @@ main <- main %>% mutate(selected = 0,
 ```
 
 ```{r }
-write_csv(all, "../Data/all_{MONTH}_{YEAR}.csv" %>% f_str())
-write_csv(main, "../Data/main_{MONTH}_{YEAR}.csv" %>% f_str())
+write_csv(all, "../Data/all_{MONTH}_{YEAR}.csv" %>% f_str(), na ="")
+write_csv(main, "../Data/main_{MONTH}_{YEAR}.csv" %>% f_str(), na ="")
 ```
 
 ```{r}
@@ -650,13 +650,6 @@ if (mr_in_ct[1,1] == 0 & mr_in_ct[2,2] == 0){
 ```
 
 # Augment Checking
-
-### SEE MY NOTE IN THE EMAIL
-
-**Check distribution of Augment marketer_code by cell_code. Does it align
-with previous month?** *(This may have to be a manual check. I can probably
-pull the distribution from the previous month in the future once this
-script has been utilized for one month and I have the output)*
 
 ```{r}
 augment <- augment %>% filter(!marketer_code %in% c("", "SP138", "SP139")) %>% 
@@ -748,10 +741,10 @@ ten_cat_naw_cell <- augment %>%
     -   **Note errors**
 
 ```{r}
-acct_spend_ncc_check <- open_seg_check_aug %>% 
+acct_spend_ncc_check <- augment %>% 
   group_by_summary_table("naw_cell_code", "account_spend") %>%
   inner_join(exp_cell_codes, by = "naw_cell_code") %>% 
-  mutate(bad_spend = (min == 0 & min_spend == ">$0")) %>% 
+  mutate(bad_spend = (min <= 0 & min_spend == ">$0")) %>% 
   dplyr::select(naw_cell_code, min, min_spend, bad_spend)
 
 acct_spend_ncc <- acct_spend_ncc_check %>% 
@@ -825,7 +818,7 @@ flags_only <- augment %>% drop_na(flag_to) %>%
                       account_spend, marketer_code, setup_dt, flag_to) 
 
 flags_only %>% 
-  write_csv(f_str("../Files_to_send/Tenure_or_Spend_Flagged_{MONTH}_{YEAR}.csv"))
+  write_csv(f_str("../Files_to_send/Tenure_or_Spend_Flagged_{MONTH}_{YEAR}.csv"), na ="")
 
 n_flags <- nrow(flags_only)
 if (n_flags > 0){

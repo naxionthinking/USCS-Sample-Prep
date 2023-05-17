@@ -47,7 +47,8 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load("tidyverse",
                "readxl",
                "stringi",
-               "varhandle")
+               "varhandle",
+               "openxlsx")
 
 # Load in configuration file variables and functions
 source('Config_and_Helpers.R') 
@@ -57,6 +58,8 @@ options(scipen = 99999, # Remove scientific notation
 
 knitr::opts_chunk$set(results = "asis", # Prints html tables nicely
                       echo=TRUE) # Show all code chunks in the output
+
+output_wb <- createWorkbook()
 ```
 
 ### Data Loading
@@ -143,8 +146,7 @@ req_sp_codes <- read_excel(SAMPLE_PREP_PATH,
 ```{r}
 if (sum(main_survey_ccs$Freq) != sum(req_sp_codes$Total)){
   warning("The Main sample recieved does not match the sample requested
-          Provide an explanation or resolution to the difference. Figure out what's wrong. 
-          Details may become more apparent in step 10 below")
+          Provide an explanation or resolution to the difference. Figure out what's wrong.")
 } else{
   message("SUCCESS: The size of the main Sample recieved matches the sample requested")
 }
@@ -219,14 +221,14 @@ if (nrow(cn68_market_codes) > 0){
 
 **ACTION NEEDED**
 
--   The next two chunks output two csv's to be sent to the operations
-    manager in an email
+-   The next two chunks output two excel sheets to be sent to the operations
+    manager in an email. A third sheet is added later with removed tenure and spend as well.
 
-    -   CSV `Main_Code_Freqs_MONTH_YEAR.csv` is found in the
-        `Files_to_send` folder
+    -   Excel sheet `Main_Code_Freqs` is found in the
+        `Files_to_send/USCS_Diagnostics_MONTH_YEAR.xlsx` file
 
-    -   CSV `Cell_Code_Freqs_MONTH_YEAR.csv` is found in the
-        `Files_to_send` folder
+    -   Excel Sheet `Cell_Code_Freqs` is found in the
+        `Files_to_send/USCS_Diagnostics_MONTH_YEAR.xlsx` file
 
 ```{r }
 # Table with marketer code frequencies for cell codes "CCSG01", "CCSG02", "CCSG03"
@@ -235,9 +237,9 @@ main_code_freq <- all_base %>%
   freq_table("marketer_code", 
              caption = "Marketer Code Frequencies for Main Cell Codes")
 
-# Write to csv to send to OPS Manager 
-main_code_freq %>%  
-  write_csv(f_str("../Files_to_send/Main_Code_Freqs_{MONTH}_{YEAR}.csv"), na ="") 
+# Write to excel to send to OPS Manager
+addWorksheet(output_wb, "Main_Code_Freqs")
+writeData(output_wb, "Main_Code_Freqs", main_code_freq)
 ```
 
 ```{r}
@@ -252,12 +254,14 @@ cell_code_freq <- cell_code_freq %>%
   dplyr::select(cell_code, naw_cell_code, Freq) %>% 
   arrange(str_extract(cell_code, "[0-9]{2}"))
 
-# Save file to be sent to PM
-cell_code_freq %>% 
-  write_csv(f_str("../Files_to_send/Cell_Code_Freqs_{MONTH}_{YEAR}.csv"), na ="")
+# Save to output excel file to be sent to PM
+addWorksheet(output_wb, "Cell_Code_Freqs")
+writeData(output_wb, "Cell_Code_Freqs", cell_code_freq)
 
 ccf <- cell_code_freq %>% 
   make_nice_table("Cell Code Frequencies with NAW Cell Codes")
+
+saveWorkbook(output_wb, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_{YEAR}.xlsx"), overwrite = TRUE)
 ```
 
 ### Check validity of userID and password
@@ -678,7 +682,13 @@ if (nrow(open_seg_check_aug) > 0){
 }
 ```
 
-### Check the Frequencies of the Augment Data
+```{r}
+# Add the open segment info to the augment file
+augment <- augment %>% 
+  left_join(open_seg, by = c("gmpi_base_cust_id", "customer_id"))
+```
+
+### Removing Bad Spend and Tenure in the Augment File
 
 -   Checking expected specs to actual specs for augmented data.
 
@@ -688,6 +698,9 @@ if (nrow(open_seg_check_aug) > 0){
     the expected specs
 
     -   Note errors
+    -   Any deletions will be put into the `Files_to_send/USCS_Diagnostics_MONTH_YEAR.xlsx` file
+      - Sheet named "Removed_Tenure_or_Spend"
+      - Note this sheet will be empty if there are no observations removed
 
 ```{r message=FALSE}
 exp_cell_codes <- read_excel(SAMPLE_PREP_PATH,
@@ -695,149 +708,27 @@ exp_cell_codes <- read_excel(SAMPLE_PREP_PATH,
 ```
 
 ```{r}
-# Check ranges of tenure and spend for augment cells
-augment <- augment %>% 
-  left_join(open_seg, by = c("gmpi_base_cust_id", "customer_id"))
-
-tv_ncc_check <- augment %>% 
-  group_by_summary_table("naw_cell_code", "tenure_var") %>% 
-  inner_join(exp_cell_codes, by="naw_cell_code") %>% 
-  dplyr::select(naw_cell_code, min, tenure_var_min, max,tenure_var_max) %>% 
-  mutate(tenure_var_max = if_else(is.na(tenure_var_max), Inf, tenure_var_max),
-         min_not_okay = min < tenure_var_min,
-         max_not_okay = max > tenure_var_max) 
-
-tv_ncc_tab <- tv_ncc_check %>%
-  make_nice_table("Tenure Var by Naw Cell Code")
-
-# Check if augment cell tenure and spends are within expected ranges
-if (sum(tv_ncc_check$min_not_okay) > 0){
-  for (ncc in tv_ncc_check$naw_cell_code[tv_ncc_check$min_not_okay]){
-    warning("Minimum Tenure not correct for {ncc}" %>% f_str())
-    cat("\n")
-  } 
-} else{
-    message("SUCCESS: Minimum tenures are as expected for all codes")
-}
-
-if (sum(tv_ncc_check$max_not_okay) > 0){
-  for (ncc in tv_ncc_check$naw_cell_code[tv_ncc_check$max_not_okay]){
-    warning("Maximum Tenure not correct for {ncc}" %>% f_str())
-    cat("\n")} 
-  } else{
-    message("SUCCESS: Maximum tenures are as expected for all codes")
-}
-```
-
-```{r}
-ten_cat_naw_cell <- augment %>% 
-  group_by_summary_table("naw_cell_code", "tenure_cat") %>%
-  make_nice_table("Tenure Category by Naw Cell Code")
-```
-
--   Check the Spend Frequency for each Augment to make sure they align with
-    the expected specs
-
-    -   **Note errors**
-
-```{r}
-acct_spend_ncc_check <- augment %>% 
-  group_by_summary_table("naw_cell_code", "account_spend") %>%
-  inner_join(exp_cell_codes, by = "naw_cell_code") %>% 
-  mutate(bad_spend = (min <= 0 & min_spend == ">$0")) %>% 
-  dplyr::select(naw_cell_code, min, min_spend, bad_spend)
-
-acct_spend_ncc <- acct_spend_ncc_check %>% 
-  make_nice_table("Account Spend by Naw Cell Code")
-
-if (sum(acct_spend_ncc_check$bad_spend) > 0){
-  for (ncc in acct_spend_ncc_check$naw_cell_code[acct_spend_ncc_check$bad_spend]){
-    warning("Minimum spend not met for {ncc}" %>% f_str())
-    cat("\n")} 
-  } else{
-    message("SUCCESS: Minimum spend met for all codes")
-}
-```
-
--   This part of the code flags people for deletion for various reasons as
-    well as noting any other change. month to month as needed.
-
--   The definition of the 'Flag_To' variable may change from month to month
-    in order to address various problems.
-
--   CURRENT FLAG_TO DEFINITION
-
-    -   1 = Delete because Wrong Sp Code in Augment
-
-    -   2 = Delete because High Tenure in Augment
-
-    -   3 = Delete because Spend not > $0 in Augment
-
--   **THERE WAS NO CODE IN SAS FOR CASE 1**
-
--   All instances with flags will be exported to the
-    `Tenure_or_Spend_Flagged_{MONTH}_{YEAR}.csv` in the
-    `Files_to_send` folder
-
-```{r FLAG DELETION}
-augment <- augment %>% 
-  mutate(
-    flag_to = case_when(
-      # Tenure Checks
-      # If anyone fails this, check with Caroline
-          # we think this should actually be 2 months*/
-      ((naw_cell_code == "CELL14") & (tenure_var <  5)) |
-      ((naw_cell_code == "CELL18") & (tenure_var > 15)) |
-      #((naw_cell_code == "CELL66") & (tenure_var <  3)) |
-      ((naw_cell_code == "CELL21") & (tenure_var > 15)) |
-      ((naw_cell_code == "CELL22") & (tenure_var > 15)) |
-      #((naw_cell_code == "CELL53") & (tenure_var > 15)) |
-      ((naw_cell_code == "CELL35") & (tenure_var >  4)) ~ 2, #|
-      #((naw_cell_code == "CELL67") & (tenure_var >  4)) ~ 2,
-      
-      # Spend Checks
-      ((naw_cell_code == "CELL21") & (account_spend <= 0)) ~3 #|
-      #((naw_cell_code == "CELL66") & (account_spend == 0)) |
-      #((naw_cell_code == "CELL67") & (account_spend == 0)) |
-      #((naw_cell_code == "CELL68") &
-         # (marketer_code %in% c('SP111','SP112',
-         #                       'SP113','SP114',
-         #                       'SP115','SP117',
-         #                       'SP118','SP123',
-         #                       'SP127','SP132',
-         #                       'SP136','SP145',
-         #                       'SP153','SP156')) &
-         # (account_spend == 0)) ~ 3
-    )
-  ) %>% arrange(flag_to)
-
-
-# identify flagged observations
-flags_only <- augment %>% drop_na(flag_to) %>% 
+tenure_spend_check <- augment %>% 
   dplyr::select(gmpi_base_cust_id, naw_cell_code, tenure_var, 
-                      account_spend, marketer_code, setup_dt, flag_to) 
+                      account_spend, marketer_code, setup_dt) %>%  
+  inner_join(exp_cell_codes, by="naw_cell_code")  %>% 
+  mutate(tenure_var_max = if_else(is.na(tenure_var_max), Inf, tenure_var_max),
+         flag_tenure = tenure_var < tenure_var_min | tenure_var > tenure_var_max,
+         flag_spend = (account_spend <= 0 & min_spend == ">$0")) %>% 
+  filter(flag_spend | flag_tenure)
 
-flags_only %>% 
-  write_csv(f_str("../Files_to_send/Tenure_or_Spend_Flagged_{MONTH}_{YEAR}.csv"), na ="")
 
-n_flags <- nrow(flags_only)
-if (n_flags > 0){
-  warning("There are {n_flags} people flagged for deletion" %>% f_str())
-  cat("\n")
-  warning("Find specifics in file `Tenure_or_Spend_Flagged_{MONTH}_{YEAR}.csv` in the Files_to_send folder" %>% f_str())
-  
-  flag_freqs <- flags_only %>% freq_table("flag_to", "Flag Freqs")
+if (nrow(tenure_spend_check) > 0){
+  warning(f_str("There are {nrow(tenure_spend_check)} people deleted in the augment file due to bad account spends or tenures. These will be found in the `Files_to_send/USCS_Diagnostics_MONTH_YEAR.xlsx` file"))
+  augment <- augment %>% anti_join(tenure_spend_check, by = "gmpi_base_cust_id")
 } else{
-  message("SUCCESS: No one is flagged for deletion")
+  message("SUCCESS: NO people deleted due to bad account spends or tenure in the augment file")
 }
+ 
+addWorksheet(output_wb, "Removed_Tenure_or_Spend")
+writeData(output_wb, "Removed_Tenure_or_Spend", tenure_spend_check) 
+saveWorkbook(output_wb, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_{YEAR}.xlsx"), overwrite = TRUE)
 ```
-
-```{r Remove Flagged Observations}
-
-# If approved, run this line to remove the flagged observations
-augment <- augment %>% filter(is.na(flag_to))
-```
-
 
 ```{r SUBJECT LINE}
 # perform ab split (if desired)

@@ -100,7 +100,7 @@ As a note, Rstudio has version control integrated into it with a user interface.
 
 # Folder Strcture
 
--   **Consumer BD**
+-   **USCS-Sample-Prep**
     -   `Sample_Prep_Helper_MONTH_YEAR.xlsx` - Contains important infomration on requested frenquecies of the Cell Codes and Marketer Codes, weighting categories, valid DMA codes, and expected ranges of tenure and account spend for augment cells. This information is used for checking if the data lines up with what is requested.
     -   **Scripts** : Scripts for preparing samples
         -   `Config_and_Helpers.R` - Contains helper functions and file paths for the main scripts

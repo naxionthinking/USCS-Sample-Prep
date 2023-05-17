@@ -33,7 +33,8 @@ pacman::p_load("tidyverse",
                "readxl",
                "stringi",
                "lubridate",
-               "varhandle")
+               "varhandle",
+               "crfsuite")
 
 source('Config_and_Helpers.R')
 
@@ -76,7 +77,6 @@ cell_no_freq <- combined %>% freq_table("cell_num", "Cell Number Frequency")
 message("There are {sum(is.na(combined$raw_fico))} missing values for raw_fico" %>% 
           f_str())
 ```
-
 
 
 ### AssIGNING WEIGHTING SEGMENTS
@@ -504,7 +504,10 @@ weighted_sample <- weighted_sample %>%
                          marketer_code == 'SP155' ~ 'Hilton Honors Aspire',
                          marketer_code == 'SP156' ~ 'Cash Magnet',
                          marketer_code == 'SP157' ~ 'Marriott Bonvoy Brilliant',
-                         marketer_code == 'SP158' ~ 'Marriott Bonvoy Bevy')
+                         marketer_code == 'SP158' ~ 'Marriott Bonvoy Bevy'),
+    
+    # Set to an empty variable. Use to come from a file that has not been updated in a long time
+    CCSG_CENTURION_TIER = ""
     )
 ```
 
@@ -651,21 +654,9 @@ weighted_sample <- weighted_sample %>%
 ```
 
 
-```{r}
-sp135 <- weighted_sample %>% filter(marketer_code == 'SP135')
-other <- weighted_sample %>% filter(marketer_code != 'SP135')
-```
-
 ```{r message=F}
-# Reading the file
-centurion_tiers <- read_csv(CENTURION_TIER_PATH) %>% 
-  set_names(c('gmpi_base_cust_id', 'CCSG_CENTURION_TIER')) %>%
-  distinct(gmpi_base_cust_id, .keep_all = TRUE)
-
 # Merging the data frames
-final <- sp135 %>% 
-  left_join(centurion_tiers) %>% 
-  full_join(other)%>% 
+final <- weighted_sample %>% 
   arrange(naw_cell_code, marketer_code, spend, tenure_cat) %>% # Sort Data 
   set_names(str_to_upper(names(.))) %>% 
   # Choose only desired variables and name them how we want them named
@@ -747,7 +738,7 @@ final <- sp135 %>%
                 SV_CARD_ART)
 ```
 
-```{r}
+```{r Reformatting}
 # Final rounding to get the data in the format that Qualtrics is expecting
 final <- final %>% mutate(
          BF_GMPI_BASE_CUST_ID = substr(BF_GMPI_BASE_CUST_ID, 5, 19), # We only want 15 digits
@@ -757,15 +748,14 @@ final <- final %>% mutate(
                   'BF_CUSTOMER_SPEND',
                   "BDL_AGE",
                   "SV_PRODUCT_TENURE"), ~round(., 2)),
-         CV_BF_ACCOUNT_SHARE_OF_WALLET = round(CV_BF_ACCOUNT_SHARE_OF_WALLET, 14)
+         CV_BF_ACCOUNT_SHARE_OF_WALLET = txt_sprintf("%.14f", CV_BF_ACCOUNT_SHARE_OF_WALLET),
+         across(c('BF_CARD_ANNIV_DT', "BF_CARD_ANNIV_YEAR", "BF_CARD_ANNIV_MONTH"), ~ifelse(. == "" | is.na(.), "REF", .))
 )
 ```
 
 ```{r}
-MONTH_LONG <- month.name[MONTH_NO] # e.g. "January"
-final %>% write_csv("../Files_to_send/Amex_760_{MONTH_LONG}_{YEAR}_All_Sample_Frame_Information_Qualtrics_{Sys.Date()}.csv" %>% f_str(), na ="")
+MONTH_STR <- sprintf("%02d", MONTH_NO)
+final %>% write_csv("../Files_to_send/AmexGABMUSCSSurvey_{YEAR}{MONTH_STR}_{Sys.Date()}.csv" %>% f_str(), na ="")
 
 rm.all.but(keep=c('final'))
 ```
-
-

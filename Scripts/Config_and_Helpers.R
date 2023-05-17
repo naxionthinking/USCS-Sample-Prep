@@ -36,16 +36,16 @@ SAMPLE_PREP_PATH <- "../Sample_Prep_Helper_{MONTH}_{YEAR}.xlsx" %>% f_str()
 RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}_{str_pad(MONTH_NO,2,pad="0")}/raw' %>% f_str() 
 
 ## Paste in the name of the base and spend text files after the "/"
-BASE_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A3.BASE.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt' %>% f_str() # LET.NATLANAL.X80A3.BASE.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt
-SPEND_PATH <- '{RAW_FILES_PATH}/LET.NATLANAL.X80A4.SPEND.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt' %>% f_str() # LET.NATLANAL.X80A4.SPEND.{month.abb[MONTH_NO-1]}{YEAR-2000}-cleaned.txt
+BASE_PATH <- '{RAW_FILES_PATH}/' %>% f_str() # LET.NATLANAL.X80A3.BASE.Jan23-cleaned.txt
+SPEND_PATH <- '{RAW_FILES_PATH}/' %>% f_str() # LET.NATLANAL.X80A4.SPEND.Jan23-cleaned.txt
 
 ## This uses relative paths to find the file lookups folder. Theoretically, it should always be 3 folders back, but change if not
-FILE_LOOKUPS <- 'L:/Amex.549/Sample/2023/File Lookups' #"../../../File Lookups" %>% f_str() # L:/Amex.549/Sample/2023/File Lookups
+FILE_LOOKUPS <- f_str("../../../File Lookups")# L:/Amex.549/Sample/2023/File Lookups
 
 ## Change file names if they change
 OPEN_SEG_PATH <-       "{FILE_LOOKUPS}/Managed_2022_segment_SAT 06232022.csv"  %>% f_str()
 SUBJECT_LINE_PATH <-   "{FILE_LOOKUPS}/MarketVoice - Card Lookup20230124_ForAnalytics.csv"  %>% f_str()
-CENTURION_TIER_PATH <- "{FILE_LOOKUPS}/760_CENTURION_TIER_CVs.csv" %>% f_str()
+# CENTURION_TIER_PATH <- "{FILE_LOOKUPS}/760_CENTURION_TIER_CVs.csv" %>% f_str() # No longer used
 CARD_ART_PATH <-       "{FILE_LOOKUPS}/Card Art URLs 20230124.csv" %>% f_str()
 
 # ------------------------------------------------------------------------------
@@ -79,12 +79,16 @@ get_last_num <- function(interval) stri_extract_last(interval, regex = "[0-9]+")
 # Make a nice looking table for the html output
 make_nice_table <- function(tab, caption){
   
+  if (knitr::is_html_output()){ # Only print the table nicely if we're knitting to save time when diagnosing issues
   knitr::kable(tab, format = "html",
                caption = paste("<center><strong>", caption, "</strong></center>"),
                escape = FALSE,
                booktabs = TRUE) %>% 
     kable_styling(bootstrap_options = "striped",
                   full_width = F, position = "center") %>% print()
+  } else{
+    print(tab)
+  }
   
   tab %>% return() # Return the original table to avoid printing NULL in output
 }

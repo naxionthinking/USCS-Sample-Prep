@@ -53,10 +53,12 @@ Replace `<Month>` and `<Year>` with the current month and year, respectively. Fo
 git checkout -b USCS_Feb_2023
 ```
 
+I've removed all information on updating branches and establishing a connection with github for simplicity. It is not necessary to push the changes to github each month. It only matters that the template file is updated if recurrent changes need to be made. So from this point on, no more git is needed after the folder is downloaded.
+<!-- 
 6. Now establish the connection with github. If you have not authenticated github previously, you will have to do so after running this line (a log in will pop up). Remeber to replace \<Month> and \<Year>
 
 ```
-git push --set-upstream origin USCS_<Month>_<Year>
+git branch --set-upstream-to origin/USCS_<Month>_<Year>
 ```
 
 1.  Now you can make any edits you want to the new files
@@ -96,11 +98,11 @@ As a note, Rstudio has version control integrated into it with a user interface.
 ## Important Notes
 
  - Once the repository has been cloned and the branch established, anyone can go to that folder and utilize its git capabilities to make changes to the branch. So do not reclone the repository in the same location if someone else has already done it.
- - In general with git, multiple people can make edits on different machines and sync them. But because we all have access to the same drives, we do not need to worry about merging changes since only one person will be using the files at a time and we all have immediate access to those changes. There are no need for commands such as "git fetch" or "git pull".
+ - In general with git, multiple people can make edits on different machines and sync them. But because we all have access to the same drives, we do not need to worry about merging changes since only one person will be using the files at a time and we all have immediate access to those changes. There are no need for commands such as "git fetch" or "git pull". -->
 
 # Folder Strcture
 
--   **USCS-Sample-Prep**
+-   **Consumer BD**
     -   `Sample_Prep_Helper_MONTH_YEAR.xlsx` - Contains important infomration on requested frenquecies of the Cell Codes and Marketer Codes, weighting categories, valid DMA codes, and expected ranges of tenure and account spend for augment cells. This information is used for checking if the data lines up with what is requested.
     -   **Scripts** : Scripts for preparing samples
         -   `Config_and_Helpers.R` - Contains helper functions and file paths for the main scripts
@@ -117,13 +119,11 @@ As a note, Rstudio has version control integrated into it with a user interface.
         -   *main_MONTH_YEAR.csv* - Unweighted main samples
         -   *unweighted_samples_MONTH_YEAR.Rdata* - Contains augmented sample and main sample created by `USCS_Sample_Prep_for_Qualtrics1.Rmd` for faster loading into `USCS_Sample_Prep_for_Qualtrics2.Rmd`. This is just for convenience, the information is also in *main.csv* and *augment.csv*
     -   **Files_to_send** : Contains datasets that should be sent to project managers.
-        -   *Amex_760_MONTH_YEAR_All_Sample_Frame_Information_Qualtrics_DATE.csv* - Final weighted dataset
-        -   *Cell_Code_Freqs_MONTH_YEAR.csv* - Frequency table of Cell codes to be sent to the operations manager
-        -   *Main_Code_Freqs_MONTH_YEAR.csv* - Main sample marketer code frequencies table to be sent to the operations manager
-        -   *Tenure_or_Spend_Flagged_MONTH_YEAR.csv* - Contains observations with flags for deletion
-            -   1 = Delete because Wrong Sp Code in Augment
-            -   2 = Delete because High Tenure in Augment
-            -   3 = Delete because Spend < $0 in Augment
+        -   *AmexGABMUSCSSurvey_YYYYMM_DATE.csv* - Final weighted dataset
+        -   *USCS_Diagnostics_MONTH_YEAR.xlsx* - Contains important diagnostic sheets
+            -   *Cell_Code_Freqs* - Frequency table of Cell codes to be sent to the operations manager
+            -   *Main_Code_Freqs* - Main sample marketer code frequencies table to be sent to the operations manager
+            -   *Removed_Tenure_or_Spend* - Contains observations deleted because of bad spend or tenure
 
 # Preparatory Steps to do each Month
 
@@ -134,6 +134,7 @@ After pulling from Github, there is a file called `Sample_Prep_Helper_Template.x
 The `Sample_Prep_Helper_MONTH_YEAR.xlsx` contains 4 sheets :
 
 -   *Augment_Specs* : Contains expected ranges for tenure and account spend for the augment cells
+    -   Used to identify observations to remove from the augment
 -   *Sp_Code_Freqs*: Contains expected frequencies for each marketer code
 -   *Valid_DMA_Codes*: Contains valid DMA codes from Nielsen
 -   *Weighting_Segments*: Contains criteria for each weighting segment in terms of what their tenure, account spend, marketer code, and naw cell code are.
@@ -229,12 +230,12 @@ Find these by clicking on the tab right above the Console that probably says `\#
 
 `USCS_Sample_Prep_for_Qualtrics1.Rmd` 
 
-1. **Flag for Deleting Cases**: Chunk `FLAG DELETION` 
-2. **Changing Subject Line Definition for Augment**: Chunk `SUBJECT LINE`
+1. **Changing Subject Line Definition for Augment**: Chunk `SUBJECT LINE`
 
 `USCS_Sample_Prep_for_Qualtrics2.Rmd`
 
 3.  **New Variable Creation/Adjustment**: Chunk `NEW VARIABLES`
+4.  **Reformatting Variables for Qualtrics**: Chunk `Reformatting`
 
 # Creating the Ouput and Running the Scripts
 
@@ -259,10 +260,3 @@ Find these by clicking on the tab right above the Console that probably says `\#
 
 - The scripts also output csv files that need to be emailed to project managers. 
   - See the `Folder Structure` section to see what is outputted. 
-- The HTML file does not include any of the code, but it does currently include the instructions of how to use the script, which does look a little odd when the code is not included. Knowing who the audience is for the output can help me tailor the information that is provided.
-
-I can also add more descriptive statements for the outputs, such as
-
-> "Currently checking if the observed frequencies of each cell code match the requested frequencies:"
-
->   "SUCCESS: Observed and requested frequencies match for the cell codes"

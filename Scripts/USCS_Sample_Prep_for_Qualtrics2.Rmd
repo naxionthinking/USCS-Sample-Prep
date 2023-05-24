@@ -45,7 +45,7 @@ knitr::opts_chunk$set(results = "asis",
                       echo=TRUE)
 ```
 
-
+**THE FOLLOWING CHUNK DOES NOT NEED TO BE RUN IF YOU JUST RAN STEP 1 AND STILL HAVE THE 'main' AND 'augment' DATAFRAMES IN YOUR ENVIRONMENT**
 ```{r}
 # Load in the generated data sets from the first step (main and augment)
 load(f_str("../Data/unweighted_samples_{MONTH}_{YEAR}.Rdata"))
@@ -73,9 +73,7 @@ combined <- full_join(main, augment) %>%
 ```{r}
 cell_no_freq <- combined %>% freq_table("cell_num", "Cell Number Frequency")
 
-######## FLAG TO FREQ
-message("There are {sum(is.na(combined$raw_fico))} missing values for raw_fico" %>% 
-          f_str())
+message(f_str("There are {sum(is.na(combined$raw_fico))} missing values for raw_fico"))
 ```
 
 

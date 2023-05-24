@@ -16,23 +16,7 @@ properly before running this script
 
 Remember to update file paths and variables in `Config_and_Helper.R`
 
-### Notes
-
--   As a heads up we tripled the recommended amount for SP 133.
-
--   Please note the variable `TOT_RVLV_INT_AM` was removed from the sample
-    file but the spaces for it remain. **The new Customer Acquisition Code
-    variable may show up on the end of this file. If you see it, please
-    remove it.**
-
--   If you have any questions about the files or checks to be done, please
-    let me or the PM team know. The subject lines will now be the same for
-    everyone as everyone is NPS to start.
-
--   All NPS respondents, including NPS augments, will see subject line "6"
-    (10 Quick Questions about your [American Express Card])."
-
--   **This code will output warnings and messages.** The warnings indicate
+ **This code will output warnings and messages.** The warnings indicate
     a check is not met. These will be printouts with "Warning:" before
     them. If a check is passed, a message will be printed with "SUCCESS:"
     before it. If any warnings are printed, figure out why and report if
@@ -733,14 +717,15 @@ saveWorkbook(output_wb, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_
 ```{r SUBJECT LINE}
 # perform ab split (if desired)
 # makes new variables based on split
+# The create_ab_split function will create the "selected" variable. So if you are performing the ab_split, remove the line that defaults the selected variable to 0.
 augment <- augment %>% 
   #create_ab_split(strat_var = 'marketer_code', sample_size = 0.5) %>% # Stratify sample 50% of obs for each marketer code
   mutate(selected = 0) %>% # comment this out if using the ab_split
   mutate(sp_code = parse_number(marketer_code),
          mv_nps_ind = if_else(selected == 0, "NPS", "MV"),
          mr_in_n = if_else(mr_in == 'Y', 1, 2),
-         subject_line = if_else(selected == 0, 6, 7)) %>% # Change the definition of subject_line according to this month's instruction
-  select(-flag_to)
+         subject_line = if_else(selected == 0, 6, 7)) # Change if PM instructs to
+
 ncc_mv_nps <- augment %>% freq_table(c("naw_cell_code", "mv_nps_ind"),
                           "naw cell code vs MV NPS IND Freqs")
 ```
@@ -751,7 +736,7 @@ sel_sbj_line <- augment %>%
 ```
 
 ```{r}
-# Store important sample datasets for weighting step
+# Store important sample datasets for the second script.
 save(augment, main, file=f_str("../Data/unweighted_samples_{MONTH}_{YEAR}.Rdata"))
 ```
 

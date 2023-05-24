@@ -57,9 +57,9 @@ CARD_ART_PATH <-       "{FILE_LOOKUPS}/Card Art URLs 20230124.csv" %>% f_str()
   # - make_nice_table
   # - freq_table
   # - group_by_summary_table
+  # - create_ab_split
   # - load_base
   # - load_spend
-  # - create_ab_split
 
 # ------------------------------------------------------------------------------
 
@@ -124,6 +124,27 @@ group_by_summary_table <- function(df, group_var, sum_var){
 }
 
 # ------------------------------------------------------------------------------
+# Function to create an ab split
+# Set random seed
+set.seed(519)
+
+# Create a stratified random sample for select variable
+create_ab_split <- function(df, strat_var, sample_size){
+  df <- df %>% 
+    mutate(id = row_number())
+  
+  a_group <- df %>% 
+    group_by(!!as.name(strat_var)) %>% 
+    sample_frac(sample_size) %>% 
+    pull(id)
+  
+  df %>% 
+    mutate(selected = ifelse(id %in% a_group, 1, 0)) %>% 
+    select(-id) %>% return()
+}
+
+# ------------------------------------------------------------------------------
+
 # LOADING IN DATA
 
 # Because there is no delimiter in the text files, we need to use fixed widths for variables
@@ -296,21 +317,4 @@ load_spend <- function(){
   
 }
 
-# Set random seed
-set.seed(519)
-
-# Create a stratified random sample for select variable
-create_ab_split <- function(df, strat_var, sample_size){
-  df <- df %>% 
-    mutate(id = row_number())
-  
-  a_group <- df %>% 
-    group_by(!!as.name(strat_var)) %>% 
-    sample_frac(sample_size) %>% 
-    pull(id)
-  
-  df %>% 
-    mutate(selected = ifelse(id %in% a_group, 1, 0)) %>% 
-    select(-id) %>% return()
-}
 

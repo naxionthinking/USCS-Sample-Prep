@@ -257,6 +257,3 @@ Find these by clicking on the tab right above the Console that probably says `\#
    - These will be printouts with "Warning:" before them. 
    - If a check is passed, a message will be printed with "SUCCESS:" before it. 
    - If any warnings are printed, figure out why and report if the warning says to.
-
-- The scripts also output csv files that need to be emailed to project managers. 
-  - See the `Folder Structure` section to see what is outputted. 

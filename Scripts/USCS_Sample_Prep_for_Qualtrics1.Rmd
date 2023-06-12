@@ -248,35 +248,6 @@ ccf <- cell_code_freq %>%
 saveWorkbook(output_wb, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_{YEAR}.xlsx"), overwrite = TRUE)
 ```
 
-### Check validity of userID and password
-
-```{r}
-invalid_ids_pws <- all_base %>% 
-  dplyr::select(account_number, personalization1, personalization2) %>% 
-  mutate(new_user_id = gsub("  ", "", personalization1) %>% trimws(), # Remove double spaces and surrounding white space from username
-         new_password = gsub("  ", "", personalization2) %>% trimws(),  # Remove double spaces and surrounding white space from password
-         VALID = case_when(
-           # Missing Value
-           new_user_id == "" | new_password == "" ~ 1, 
-           # Wrong Length
-           nchar(new_user_id) != 7 | nchar(new_password) != 8 ~ 2,
-           # First character of ID not 'u'
-           tolower(substr(new_user_id, 1, 1)) != 'u' ~ 3, 
-           # userID should be all digits and password should be characters
-           !(substr(new_user_id, 2, 7) %>% is_numbers_only() & 
-               new_password %>% is_letters_only) ~ 4, 
-           TRUE ~ 0) # If none of the above cases, it's valid
-         ) %>% 
-  filter(VALID != 0) # Remove all valid cases
-
-if (nrow(invalid_ids_pws) > 0){
-  warning("Some invalid passwords or usernames found. Report to Manager")
-  invalid_ids_pws %>% make_nice_table("Invalid Usernames and Passwords")
-} else{
-  message("SUCCESS: All passwords and usernames valid")
-}
-```
-
 ### Check for duplicates
 
 ```{r}

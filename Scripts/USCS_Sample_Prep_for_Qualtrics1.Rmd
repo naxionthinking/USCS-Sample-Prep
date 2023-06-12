@@ -251,7 +251,7 @@ saveWorkbook(output_wb, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_
 ### Check validity of userID and password
 
 ```{r}
-invalid <- all_base %>% 
+invalid_ids_pws <- all_base %>% 
   dplyr::select(account_number, personalization1, personalization2) %>% 
   mutate(new_user_id = gsub("  ", "", personalization1) %>% trimws(), # Remove double spaces and surrounding white space from username
          new_password = gsub("  ", "", personalization2) %>% trimws(),  # Remove double spaces and surrounding white space from password
@@ -261,7 +261,7 @@ invalid <- all_base %>%
            # Wrong Length
            nchar(new_user_id) != 7 | nchar(new_password) != 8 ~ 2,
            # First character of ID not 'u'
-           substr(new_user_id, 1, 1) != 'u' ~ 3, 
+           tolower(substr(new_user_id, 1, 1)) != 'u' ~ 3, 
            # userID should be all digits and password should be characters
            !(substr(new_user_id, 2, 7) %>% is_numbers_only() & 
                new_password %>% is_letters_only) ~ 4, 
@@ -269,9 +269,9 @@ invalid <- all_base %>%
          ) %>% 
   filter(VALID != 0) # Remove all valid cases
 
-if (nrow(invalid) > 0){
+if (nrow(invalid_ids_pws) > 0){
   warning("Some invalid passwords or usernames found. Report to Manager")
-  invalid %>% make_nice_table("Invalid Usernames and Passwords")
+  invalid_ids_pws %>% make_nice_table("Invalid Usernames and Passwords")
 } else{
   message("SUCCESS: All passwords and usernames valid")
 }

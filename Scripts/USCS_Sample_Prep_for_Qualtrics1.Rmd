@@ -48,12 +48,16 @@ output_wb <- createWorkbook()
 
 ### Data Loading
 
-```{r Load in base and spend dataframes}
-all_base <- load_base() 
-all_spend <- load_spend()
+- As of June 2023, we are ignoring the data that comes in from the Spend file as we do not include any of its variables in the final sample
+- So disregard any anomalies with the spend dataframe
+- The code may be removed for loading spend in the future
 
-f_str("There were {format(nrow(all_base), big.mark = ',')} observations loaded in for BASE") %>% message()
-f_str("There were {format(nrow(all_spend),big.mark = ',')} observations loaded in for SPEND") %>% message()
+```{r Load in base and spend dataframes}
+USCS_Base <- load_base() 
+USCS_Spend <- load_spend()
+
+f_str("There were {format(nrow(USCS_Base), big.mark = ',')} observations loaded in for BASE") %>% message()
+f_str("There were {format(nrow(USCS_Spend),big.mark = ',')} observations loaded in for SPEND") %>% message()
 ```
 
 ```{r Missing Value Summary}
@@ -68,12 +72,14 @@ miss_vars <- c("first_nm",
                "customer_spend",
                "account_spend")
 
-# Number and Percent of missing values for key variables
-miss_vals <- all_base %>%
+# Table with number and percent of missing values for key variables
+# This is mostly just for logging what's happened
+# just make sure no variables have a large number of missing values, in my (Beck's) 5 months, I haven't seen anything with more than 0.05% missing
+miss_vals <- USCS_Base %>%
   select(all_of(miss_vars)) %>%
   summarise_all(~sum(is.na(.))) %>%
   pivot_longer(cols = everything(), names_to = "Variable", values_to = "n_missing") %>%
-  mutate("Percent Missing" = paste0(round(n_missing / nrow(all_base) * 100, 4), " %")) %>% 
+  mutate("Percent Missing" = paste0(round(n_missing / nrow(USCS_Base) * 100, 4), " %")) %>% 
   arrange(desc(n_missing)) %>% make_nice_table("Number of Missing Values per Key Variable")
 ```
 
@@ -82,7 +88,7 @@ miss_vals <- all_base %>%
 # Change these monthly based on OPS instructions
 # Comment out filters that do not need to be applied
 
-all_base <- all_base %>% 
+USCS_Base <- USCS_Base %>% 
   # *Change new_smart_rev to numeric
   #mutate(new_smart_rev = as.numeric(new_smart_rev_char)) %>%
   
@@ -91,8 +97,7 @@ all_base <- all_base %>%
   #*from ops email 9 28 22: #take out the three people missing marketer_code
   filter(marketer_code != "") 
 
-all_spend <- all_spend %>%
-  rename(gmpi_base_cust_id = customer_id) %>% 
+USCS_Spend <- USCS_Spend %>%
   # Remove records with blank space at start of ID
   filter(substring(gmpi_base_cust_id, 1, 1) != " ") 
 ```
@@ -106,7 +111,7 @@ all_spend <- all_spend %>%
 
 ```{r Check Cell Codes, message=FALSE}
 # Create a frequency table of each cell code
-cell_code_freq <- all_base %>% 
+cell_code_freq <- USCS_Base %>% 
   freq_table("cell_code", caption = "Cell Code Frequencies")
 ```
 
@@ -123,8 +128,8 @@ aug_survey_ccs <- cell_code_freq %>%
 req_sp_codes <- read_excel(SAMPLE_PREP_PATH,
                            sheet = "Sp_Code_Freqs") %>% 
   set_names(c("sp_code", "card_name", "Total")) %>% 
-  mutate(sp_code = glue("SP{sp_code}")) %>% 
-  drop_na(sp_code)
+  drop_na(sp_code) %>% # Remove blank spaces if they were kept in
+  mutate(sp_code = glue("SP{sp_code}"))
 ```
 
 ```{r}
@@ -152,27 +157,27 @@ if (nrow(missing_ccs) > 0) {
     PM
 
 ```{r}
-# Check missing account spend and tenure add
-acct_spend_add_t_NAs <- all_base %>% dplyr::select(account_spend, t_add) %>% 
+# Check missing account spend and tenure
+miss_spend_and_ten <- USCS_Base %>% dplyr::select(account_spend, t_add) %>% 
   sapply(function(x) sum(is.na(x))) %>% as.data.frame() %>% 
   set_names("No. Missing Values")
 
-acct_spend_add_t_NAs_tab <- acct_spend_add_t_NAs %>% 
+miss_spend_and_ten_tab <- miss_spend_and_ten %>% 
   make_nice_table("Missing Values Account Spend and Tenure Add") 
 
-if(acct_spend_add_t_NAs["account_spend",] > 0){
+if(miss_spend_and_ten["account_spend",] > 0){
   warning("ACCOUNT SPEND has missing values")
 } else{
   message("SUCCESS: ACCOUNT SPEND does not have missing values")
 }
 
-if(acct_spend_add_t_NAs["t_add",] > 0){
+if(miss_spend_and_ten["t_add",] > 0){
   warning("New Product Tenure has missing values")
 }else{
   message("SUCCESS: New Product Tenure does not have missing values")
 }
 # Check missing set up dates
-miss_setup_dt <- all_base[all_base$setup_dt == "",]
+miss_setup_dt <- USCS_Base[USCS_Base$setup_dt == "",]
 if (nrow(miss_setup_dt) > 0){
   warning("Missing Set up Date. Check miss_setup_dt variable")
 }else{
@@ -180,14 +185,14 @@ if (nrow(miss_setup_dt) > 0){
 }
 
 # Check missing marketer codes
-miss_marketer_code <- all_base[all_base$marketer_code == "",]
+miss_marketer_code <- USCS_Base[USCS_Base$marketer_code == "",]
 if (nrow(miss_marketer_code) > 0){
   warning("Missing Marketer Code. Check miss_marketer_code variable")
 }else{
   message("SUCCESS: No missing marketer codes")
 }
 
-cn68_market_codes <- all_base[all_base$cell_code == 'CN68',] %>% 
+cn68_market_codes <- USCS_Base[USCS_Base$cell_code == 'CN68',] %>% 
   dplyr::select(cell_code, marketer_code) %>% 
   mutate(is_not_sp135 = marketer_code != "SP135")
 
@@ -203,10 +208,11 @@ if (nrow(cn68_market_codes) > 0){
   }
 ```
 
-**ACTION NEEDED**
 
 -   The next two chunks output two excel sheets to be sent to the operations
     manager in an email. A third sheet is added later with removed tenure and spend as well.
+    
+- I tend to send everything over at once at the end because then you don't have to wait for responses and the code runs relatively fast
 
     -   Excel sheet `Main_Code_Freqs` is found in the
         `Files_to_send/USCS_Diagnostics_MONTH_YEAR.xlsx` file
@@ -216,7 +222,7 @@ if (nrow(cn68_market_codes) > 0){
 
 ```{r }
 # Table with marketer code frequencies for cell codes "CCSG01", "CCSG02", "CCSG03"
-main_code_freq <- all_base %>% 
+main_code_freq <- USCS_Base %>% 
   filter(cell_code %in% c("CCSG01", "CCSG02", "CCSG03")) %>% 
   freq_table("marketer_code", 
              caption = "Marketer Code Frequencies for Main Cell Codes")
@@ -251,18 +257,18 @@ saveWorkbook(output_wb, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_
 ### Check for duplicates
 
 ```{r}
-all_base_dupes <- all_base[duplicated(all_base$gmpi_base_cust_id),]
-all_spend_dupes <- all_spend[duplicated(all_spend$gmpi_base_cust_id),]
+USCS_Base_dupes <- USCS_Base[duplicated(USCS_Base$gmpi_base_cust_id),]
+USCS_Spend_dupes <- USCS_Spend[duplicated(USCS_Spend$gmpi_base_cust_id),]
 
-if (nrow(all_base_dupes) > 0){
+if (nrow(USCS_Base_dupes) > 0){
   warning("Duplicate Base customer IDs in the Allbase dataframe")
-  print(all_base_dupes$gmpi_base_cust_id)
+  print(USCS_Base_dupes$gmpi_base_cust_id)
 } else{
   message("SUCCESS: No duplicates in Allbase dataframe")}
 
-if (nrow(all_spend_dupes) > 0){
+if (nrow(USCS_Spend_dupes) > 0){
   warning("Duplicate base customer IDs in the Allspend dataframe")
-  print(all_spend_dupes$gmpi_base_cust_id)
+  print(USCS_Spend_dupes$gmpi_base_cust_id)
 } else{
   message("SUCCESS: No duplicates in Allspend dataframe")}
 ```
@@ -273,9 +279,11 @@ if (nrow(all_spend_dupes) > 0){
     'naw_cell_code'
 -   Add code for new Augments
 -   Make sure the proper number of records remain
+- Once again, this may be altered if we are removing the spend dataframe.
 
 ```{r}
-all <- inner_join(all_base, all_spend, by = "gmpi_base_cust_id") %>% 
+ # Left join ensures only USCS_Base matters, If spend matters again, change to inner_join
+USCS_Sample <- left_join(USCS_Base, USCS_Spend, by = "gmpi_base_cust_id") %>%
   mutate(setup_year = substr(setup_dt, 1, 4) %>% as.numeric(),
          setup_month = substr(setup_dt, 6,7) %>% as.numeric(),
          tenure_var = 12*(YEAR-1-setup_year)+(MONTH_NO+12-setup_month),
@@ -318,7 +326,7 @@ all <- inner_join(all_base, all_spend, by = "gmpi_base_cust_id") %>%
          )
 
 
-if (nrow(all) != nrow(all_base)){
+if (nrow(USCS_Sample) != nrow(USCS_Base)){
   warning("Size of merged dataframe does not match original dataframe.")
 } else{
   message("SUCCESS: Size of merged dataframe matches original dataframe")
@@ -326,26 +334,19 @@ if (nrow(all) != nrow(all_base)){
 
 ```
 
-```{r}
-# Save datasets and remove from memory
-all_base %>% write_csv("../Data/all_base_{MONTH}_{YEAR}.csv" %>% f_str(), na ="")
-all_spend %>% write_csv("../Data/all_spend_{MONTH}_{YEAR}.csv" %>% f_str(), na ="")
-#rm(all_base, all_spend) # Uncomment this to remove all_base and all_spend
-```
-
 ### Checking for Duplicate Keys in Merged Data frame
 
 ```{r message=FALSE}
-# First checking distribution of sample by Augment/MAIN;
-naw_freq_table <- all %>%
+# Checking distribution of sample by Augment/MAIN;
+naw_freq_table <- USCS_Sample %>%
   freq_table(c("naw_type", "naw_cell_code"),
              caption="Naw Type vs Naw Cell Code Frequencies")
 ```
 
 ```{r }
 # Identify duplicates for customer id and username/password
-cust_id_dupes <- all[duplicated(all$gmpi_base_cust_id),]
-pers_dupes <- all[duplicated(all[,c("personalization1", "personalization2")]),]
+cust_id_dupes <- USCS_Sample[duplicated(USCS_Sample$gmpi_base_cust_id),]
+pers_dupes <- USCS_Sample[duplicated(USCS_Sample[,c("personalization1", "personalization2")]),]
 
 if (nrow(cust_id_dupes) > 0){
   warning("There are customer ID duplicates in the merged dataframe")
@@ -376,7 +377,7 @@ valid_dmas <- read_excel(SAMPLE_PREP_PATH,
 
 ```{r }
 # identify invalid dma's if any and get frequencies
-invalid_dmas <- all %>% filter(!best_dma_cd %in% valid_dmas) %>% group_by(best_dma_cd) %>% summarize(n = n()) 
+invalid_dmas <- USCS_Sample %>% filter(!best_dma_cd %in% valid_dmas) %>% group_by(best_dma_cd) %>% summarize(n = n()) 
 
 if (nrow(invalid_dmas) > 0){
   warning("There are invlaid DMA Codes in the file. Here are the codes and number of occurrences:")
@@ -385,6 +386,46 @@ if (nrow(invalid_dmas) > 0){
   message("SUCCESS: No invalid DMAs found in file")
 }
 ```
+
+### Saving and Loading dataframe before removals
+
+- Because we automatically remove bad spends, tenures, and year of birth before confirming with PM, we save the dataset before removals, so we can easily return to it if we need to modify the code to keep these people in the dataframe
+
+```{r}
+save(USCS_Sample, file="../Data/USCS_Sample_Preremovals.Rdata")
+```
+
+```{r}
+# Uncomment this to load in the image of the USCS_Sample dataframe before removals
+# load("../Data/USCS_Sample_Preremovals.Rdata")
+```
+
+
+### Age Check
+
+-   Make sure no one is less than 18 or older than 120
+
+    -   Note errors
+    -   Any deletions will be put into the `Files_to_send/USCS_Diagnostics_MONTH_YEAR.xlsx` file
+      - Sheet named "Removed_YOB"
+      - Note this sheet will be empty if there are no observations removed
+
+```{r}
+wrong_yob <- USCS_Sample %>% filter(raw_age < 18 | raw_age > 120) %>% 
+  select(gmpi_base_cust_id, marketer_code, naw_cell_code, raw_age, setup_dt, card_anniv_dt)
+
+if (nrow(wrong_yob) > 0){
+  warning(f_str('There were {nrow(wrong_yob)} people who are too young (<18)'))
+  warning("These people are automatically removed from the sample and put into the Diagnostic Excel file. Verify with the PM if they are okay with these being removed. If not, comment out the anti_join line in this chunk when rerunning the script.")
+  
+  # Save the removals to the output workbook
+  addWorksheet(output_wb, "Removed_YOB")
+  writeData(output_wb, "Removed_YOB", wrong_yob) 
+  # Remove the samples
+  USCS_Sample <- USCS_Sample %>% anti_join(wrong_yob, by = 'gmpi_base_cust_id') # Line to comment out if PM does not want these samples removed
+}
+```
+
 
 ### Frequency Tables for Spend and Tenure
 
@@ -395,24 +436,24 @@ if (nrow(invalid_dmas) > 0){
 
 ```{r}
 # Split dataframe into main and augmented
-main <- all %>% filter(naw_type == "MAIN") %>% 
+USCS_Main <- USCS_Sample %>% filter(naw_type == "MAIN") %>% 
   mutate(customer_id = gmpi_base_cust_id %>% as.numeric())
-augment <- all %>% filter(naw_type == "AUGMENT")
+USCS_Augment <- USCS_Sample %>% filter(naw_type == "AUGMENT")
 
 ```
 
 ```{r}
-spend_freq_table <- main %>% 
+spend_freq_table <- USCS_Main %>% 
   freq_table("spend", caption="Spend Category Frequencies")
 
-tenure_freq_table <- main %>% 
+tenure_freq_table <- USCS_Main %>% 
   freq_table("tenure_cat", caption="Tenure Category Frequencies")
 
-spend_freq_table_cat1 <- main %>% 
+spend_freq_table_cat1 <- USCS_Main %>% 
   filter(tenure_cat == 1) %>%
   freq_table("spend", caption="Spend Category Freqs for Tenure Category 1")
 
-tenure_freq_table_cat1 <- main %>% 
+tenure_freq_table_cat1 <- USCS_Main %>% 
   filter(tenure_cat == 1) %>% 
   freq_table("tenure_var", caption="Tenure Var Frequencies for Tenure Category 1")
 ```
@@ -422,7 +463,7 @@ tenure_freq_table_cat1 <- main %>%
 -   Compare totals for desired sp codes to requested sp code totals
 
 ```{r}
-main_sp_codes <- main %>% 
+main_sp_codes <- USCS_Main %>% 
   freq_table("marketer_code", caption = "Sp Code Frequencies")
 ```
 
@@ -466,10 +507,10 @@ sp_code_no_a <- c("SP111",
                   "SP156") # SP 156 added in JULY 2018
 
 # Sp codes that are allowed to have no or negative spend
-sp_code_a <- main$marketer_code[!main$marketer_code %in% sp_code_no_a] %>% unique()
+sp_code_a <- USCS_Main$marketer_code[!USCS_Main$marketer_code %in% sp_code_no_a] %>% unique()
 
 # Sp codes observed to have spend <= 0
-obs_sp_code_a <- main[main$spend == "A",]$marketer_code %>% unique()
+obs_sp_code_a <- USCS_Main[USCS_Main$spend == "A",]$marketer_code %>% unique()
 
 # Identify if sp codes that should not have no spend have no spend
 wrong_no_spends <- sp_code_no_a[sp_code_no_a %in% obs_sp_code_a]
@@ -491,10 +532,22 @@ if (length(missing_no_spends) > 0) {
   for (code in missing_no_spends) {
     warning("Sp Code: {code} has no observations spend <= 0 when it is allowed too" %>% f_str())
     cat("\n")}
-  warning("Check the UC file to see what proportion of the pre and post suppression counts are for $0 spend on that product.  Given the sample request, how likely is it that we received no $0 spenders? If it seems unreasonable, you should discuss the matter with operations")
+  warning("Check the UC file to see what proportion of the pre and post suppression counts are for $0 spend on that product.  Given the sample request, how likely is it that we received no $0 spenders? If it seems unreasonable, you should discuss the matter with operations. If it's reasonable, just note in the next chunk and move on.")
 } else{
   message("SUCCESS: All SP Codes who can have spend <= 0, have observations with spend <= 0")
 } 
+```
+
+-- This is an example note from June 2023 of when this occurred for SP code 154
+
+```{r}
+# sp154 <- USCS_Main %>% filter(marketer_code == 'SP154')
+# 
+# message(f_str('There were {nrow(sp154)} samples pulled for Marketer Code 154. The UC file for Q2 2023 shows that the post suppression count percentage is 0.1% for 0 spend. Given the small sample pulled for SP154 and the 0.1% likelihood that the sample is 0 spend, having no 0 spend in our sample is okay.'))
+# 
+# sp154 %>% 
+#   select(account_spend) %>%
+#   summary()
 ```
 
 
@@ -520,7 +573,7 @@ open_seg <- read_csv(OPEN_SEG_PATH) %>%
 # check distributions
 
 # Customer ID Distribution in Main
-cid_main <- main %>% 
+cid_main <- USCS_Main %>% 
   dplyr::select(customer_id_main = customer_id) %>% 
   summary() %>% make_nice_table("Customer ID Main Descriptive Stats")
 
@@ -543,11 +596,11 @@ if (nrow(open_seg_dupes) > 0){
 
 ```{r}
 # Check if someone in the main file is in the open segment file
-open_seg_check <- main %>% 
+open_seg_check <- USCS_Main %>% 
   inner_join(open_seg, by = c("gmpi_base_cust_id", "customer_id"))
 
 if (nrow(open_seg_check) > 0){
-  warning("Customers in the main file appear in the new segment file")
+  warning(f_str("{nrow(open_seg_check)} Customers in the main file appear in the new segment file"))
   cat('\n')
   if (nrow(open_seg_check) > 3000){
     warning("More than 3000 main file customers appear in the new segment. REPORT")
@@ -561,7 +614,7 @@ if (nrow(open_seg_check) > 0){
 
 ```{r }
 # Generate count for early and non-early tenure
-et_tab <- main %>% 
+et_tab <- USCS_Main %>% 
   count(marketer_code, tenure_cat) %>%
   spread(tenure_cat, n, fill = 0)
 
@@ -577,30 +630,31 @@ et_tab <- et_tab %>%
 ### Diagnostic Tests
 
 -   Keeping the 'Selected' functionality in for now.
+-   I wrote an AB split testing function in case that is desired in the future instead
 
 ```{r}
-mrktr_naw <- table(main$marketer_code, main$naw_cell_code) %>%
+mrktr_naw <- table(USCS_Main$marketer_code, USCS_Main$naw_cell_code) %>%
   make_nice_table("Marketer Code vs NAw Cell Code")
 
-main <- main %>% mutate(selected = 0,
-                           # Extract marketer code (i.e. 101 from SP101)
-                          sp_code = str_extract(marketer_code, "[0-9]{3}") %>% 
-                            as.numeric(),
-                           # Extract drop code (i.e. 1 from DROP 01)
-                          drop_code = str_extract(naw_cell_code, "[0-9]{2}") %>% 
-                            as.numeric(),
-                          mv_nps_ind = if_else(selected == 0, "NPS", "MV"),
-                          mr_in_n = if_else(mr_in == 'Y', 1, 2),
-                          subject_line = if_else(selected == 0, 6, 7))
-```
 
-```{r }
-write_csv(all, "../Data/all_{MONTH}_{YEAR}.csv" %>% f_str(), na ="")
-write_csv(main, "../Data/main_{MONTH}_{YEAR}.csv" %>% f_str(), na ="")
+# perform ab split (if desired)
+# makes new variables based on split
+# The create_ab_split function will create the "selected" variable. So if you are performing the ab_split, remove the line that defaults the selected variable to 0.
+USCS_Main <- USCS_Main %>% 
+  #create_ab_split(strat_var = 'marketer_code', sample_size = 0.5) %>% # Stratify sample 50% of obs for each marketer code
+  mutate(selected = 0) %>% # comment this out if using the ab_split
+  mutate(sp_code = str_extract(marketer_code, "[0-9]{3}") %>% # Extract marketer code (i.e. 101 from SP101)
+          as.numeric(),
+         # Extract drop code (i.e. 1 from DROP 01)
+         drop_code = str_extract(naw_cell_code, "[0-9]{2}") %>% 
+          as.numeric(),
+         mv_nps_ind = if_else(selected == 0, "NPS", "MV"),
+         mr_in_n = if_else(mr_in == 'Y', 1, 2),
+         subject_line = if_else(selected == 0, 6, 7))
 ```
 
 ```{r}
-mr_in_ct <- table(main$mr_in,main$mr_in_n)
+mr_in_ct <- table(USCS_Main$mr_in,USCS_Main$mr_in_n)
 
 if (mr_in_ct[1,1] == 0 & mr_in_ct[2,2] == 0){
   message("SUCCESS: MR IN split worked correctly")
@@ -611,21 +665,21 @@ if (mr_in_ct[1,1] == 0 & mr_in_ct[2,2] == 0){
 # Augment Checking
 
 ```{r}
-augment <- augment %>% filter(!marketer_code %in% c("", "SP138", "SP139")) %>% 
+USCS_Augment <- USCS_Augment %>% filter(!marketer_code %in% c("", "SP138", "SP139")) %>% 
   mutate(customer_id = gmpi_base_cust_id %>% as.numeric())
 
-cell_code_naw_sp_ct <- augment %>% 
+cell_code_naw_sp_ct <- USCS_Augment %>% 
   freq_table(c("naw_cell_code", "cell_code", "marketer_code"), 
              caption="Naw Cell Code vs Cell Code vs Sp Code Frequencies")
 ```
 
 ```{r}
 # Check if someone in the augmented file is in the open segment file
-open_seg_check_aug <- augment %>% 
+open_seg_check_aug <- USCS_Augment %>% 
   inner_join(open_seg, by = c("gmpi_base_cust_id", "customer_id"))
 
 if (nrow(open_seg_check_aug) > 0){
-  warning("Customers in the augmented file appear in the new segment file")
+  warning(f_str("{nrow(open_seg_check_aug)} Customers in the augmented file appear in the new segment file"))
   cat('\n')
   if (nrow(open_seg_check_aug) > 3000){
     warning("More than 3000 augmented file customers appear in the new segment. REPORT")
@@ -639,7 +693,7 @@ if (nrow(open_seg_check_aug) > 0){
 
 ```{r}
 # Add the open segment info to the augment file
-augment <- augment %>% 
+USCS_Augment <- USCS_Augment %>% 
   left_join(open_seg, by = c("gmpi_base_cust_id", "customer_id"))
 ```
 
@@ -663,7 +717,7 @@ exp_cell_codes <- read_excel(SAMPLE_PREP_PATH,
 ```
 
 ```{r}
-tenure_spend_check <- augment %>% 
+tenure_spend_check <- USCS_Augment %>% 
   dplyr::select(gmpi_base_cust_id, naw_cell_code, tenure_var, 
                       account_spend, marketer_code, setup_dt) %>%  
   inner_join(exp_cell_codes, by="naw_cell_code")  %>% 
@@ -675,7 +729,7 @@ tenure_spend_check <- augment %>%
 
 if (nrow(tenure_spend_check) > 0){
   warning(f_str("There are {nrow(tenure_spend_check)} people deleted in the augment file due to bad account spends or tenures. These will be found in the `Files_to_send/USCS_Diagnostics_MONTH_YEAR.xlsx` file"))
-  augment <- augment %>% anti_join(tenure_spend_check, by = "gmpi_base_cust_id")
+  USCS_Augment <- USCS_Augment %>% anti_join(tenure_spend_check, by = "gmpi_base_cust_id") # Comment this out if not removing
 } else{
   message("SUCCESS: NO people deleted due to bad account spends or tenure in the augment file")
 }
@@ -689,7 +743,7 @@ saveWorkbook(output_wb, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_
 # perform ab split (if desired)
 # makes new variables based on split
 # The create_ab_split function will create the "selected" variable. So if you are performing the ab_split, remove the line that defaults the selected variable to 0.
-augment <- augment %>% 
+USCS_Augment <- USCS_Augment %>% 
   #create_ab_split(strat_var = 'marketer_code', sample_size = 0.5) %>% # Stratify sample 50% of obs for each marketer code
   mutate(selected = 0) %>% # comment this out if using the ab_split
   mutate(sp_code = parse_number(marketer_code),
@@ -697,23 +751,56 @@ augment <- augment %>%
          mr_in_n = if_else(mr_in == 'Y', 1, 2),
          subject_line = if_else(selected == 0, 6, 7)) # Change if PM instructs to
 
-ncc_mv_nps <- augment %>% freq_table(c("naw_cell_code", "mv_nps_ind"),
+ncc_mv_nps <- USCS_Augment %>% freq_table(c("naw_cell_code", "mv_nps_ind"),
                           "naw cell code vs MV NPS IND Freqs")
 ```
 
 ```{r}
-sel_sbj_line <- augment %>%
+sel_sbj_line <- USCS_Augment %>%
   freq_table(c("selected", "subject_line"), "Selected vs Subject Line Freqs")
 ```
 
 ```{r}
 # Store important sample datasets for the second script.
-save(augment, main, file=f_str("../Data/unweighted_samples_{MONTH}_{YEAR}.Rdata"))
+save(USCS_Augment, USCS_Main, file=f_str("../Data/unweighted_samples_{MONTH}_{YEAR}.Rdata"))
 ```
+
+**ACTION NEEDED. STOP HERE**
+
+- Now that you completed the first step of the sample prep, write an email to the PM.
+- They need to confirm if you can remove the bad tenure, spend, and YOB people we removed and they verify the counts we recieved
+- First copy the diagnostic file into the Communications subfolder of the project folder that the PM has access to (e.g, `\\pm1\27-610\Sampling-Weighting\2023_07\Communications\`)
+  - Create this folder if it is not already there
+- Then write an email including a link to that file and briefly saying what was removed and why it was removed
+- This is an example email. I had already run step 2 before sending this email, but you can just modify the first line if you want to send it now.
+  - It's probably best to send now in case they do not want certain people removed.
+
+
+Hi Ryan,
+
+The USCS Sample has been prepped. It can be found here: `\\pm1\27-610\Sampling-Weighting\2023_07\AllSample\AmexGABMUSCSSurvey_202307_2023-06-28.csv`
+
+The following excel contains diagnostic information about cell frequencies and individual samples that were removed: `\\pm1\27-610\Sampling-Weighting\2023_07\Communications\USCS_Diagnostics_JUL_2023.xlsx`
+•	There were 98 people removed because of too high tenure in Cell35. All of them were set up in February, which is greater than the desired maximum of 120 days. These can be found in the above excel. 
+•	There were 4 people removed for having birth years within the past 18 years. Their setup dates are much older than 18 though, so the at least one of those variables are wrong. They are currently removed from the final sample but can be put back in if desired. These can be found in the above excel. 
+
+Let us know if you are okay with these being deleted or if you want them put back.
+
+Best,
+Beck
+
+
+**IF THEY SAY YOU SHOULD NOT REMOVE CERTAIN PEOPLE**
+  - Go back to the section titled "Saving and Loading dataframe before removals"
+  - Uncomment the line that loads in the `all_premoved.Rdata` file
+    - This will overwrite the all dataframe in your environment to the version before anything was removed
+    - Modify the code to not remove the people who should not be removed
+      - Hopefully it's as simple as comment out one of the "ant-Join" statements
+
 
 ```{r message=FALSE}
 # IF YOU ARE RUNNING `USCS_Weighting.Rmd` right after this, run this chunk and then you DO NOT have to reload in the data with the step `load(f_str("../Data/unweighted_samples_{MONTH}_{YEAR}.Rdata"))`
 # There's no harm if you do, but the dataframes you need will stay in your environment
 
-rm.all.but(keep = c('main', 'augment'))
+rm.all.but(keep = c('USCS_Main', 'USCS_Augment'))
 ```

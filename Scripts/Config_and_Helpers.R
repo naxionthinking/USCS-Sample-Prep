@@ -262,7 +262,7 @@ load_spend <- function(){
                         c('REPL_NUMBER',         1,'n'),
                         c('BASIC_SUPP_NO',       2,'n'),
                         c('CHECK_DIGIT',         1,'n'),
-                        c('CUSTOMER_ID',        19,'c'),
+                        c('GMPI_BASE_CUST_ID',  19,'c'),
                         c('Prestige_spnd',      10,'n'),
                         c('Prestige_ROCs',       4,'n'),
                         c('Internet_spnd',      10,'n'),

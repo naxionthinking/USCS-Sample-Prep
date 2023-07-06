@@ -53,7 +53,7 @@ Replace `<Month>` and `<Year>` with the current month and year, respectively. Fo
 git checkout -b USCS_Feb_2023
 ```
 
-I've removed all information on updating branches and establishing a connection with github for simplicity. It is not necessary to push the changes to github each month. It only matters that the template file is updated if recurrent changes need to be made. So from this point on, no more git is needed after the folder is downloaded.
+I've removed all information on updating branches and establishing a connection with github for simplicity. It is not necessary to push the changes to github each month. It only matters that the template file is updated if recurrent changes need to be made. So from this point on, no more git is needed after the folder is downloaded. If you want to see the documentation, open the readMe.md file rather than viewing it on GitHub. The documentation is below in a comment that does not show up when just viewing.
 <!-- 
 6. Now establish the connection with github. If you have not authenticated github previously, you will have to do so after running this line (a log in will pop up). Remeber to replace \<Month> and \<Year>
 
@@ -111,19 +111,16 @@ As a note, Rstudio has version control integrated into it with a user interface.
         -   `USCS_Sample_Prep_for_Qualtrics1.Rmd` Takes raw text data, cleans it up, verifies frequencies are correct, creates new variables. Prepares sample for weighting. (Replaces steps 1 and 2)
         -   `USCS_Sample_Prep_for_Qualtrics2.html` - Output of the `USCS_Sample_Prep_for_Qualtrics2.Rmd` script including information such as warnings on whether or not tests were passed and descriptive tables. This replaces the SAS log and lst files.
         -   `USCS_Sample_Prep_for_Qualtrics2.Rmd` - Segments the data based on desired weights and creates new variables. Also contains validation checks. (Replaces step 3)
-    -   **Data** : Where all intermediary storage files are outputted. These are not used again in the scripts after they are outputted except for *unweighted_samples.Rdata* but are stored just in case.
-        -   *base_MONTH_YEAR.csv* - Cleaned version of BASE text file
-        -   *spend_MONTH_YEAR.csv* - Cleaned version of SPEND text file
-        -   *all_MONTH_YEAR.csv* - Merged Base and Spend datasets with additional variables
-        -   *augment_MONTH_YEAR.csv* - Unweighted augmented samples
-        -   *main_MONTH_YEAR.csv* - Unweighted main samples
-        -   *unweighted_samples_MONTH_YEAR.Rdata* - Contains augmented sample and main sample created by `USCS_Sample_Prep_for_Qualtrics1.Rmd` for faster loading into `USCS_Sample_Prep_for_Qualtrics2.Rmd`. This is just for convenience, the information is also in *main.csv* and *augment.csv*
+    -   **Data** : Where all intermediary storage files are outputted. These are for convenience of faster loading and are not sent to anyone.
+        -   *USCS_Sample_Preremovals.Rdata* - Version of **USCS_Sample** dataframe before removals are made for bad tenure, spend, or date of birth. This is stored to make it easier to revert to the original dataframe if the PM does not want certain people removed
+        -   *unweighted_samples_MONTH_YEAR.Rdata* - Contains augmented and main samples created by `USCS_Sample_Prep_for_Qualtrics1.Rmd` for faster loading into `USCS_Sample_Prep_for_Qualtrics2.Rmd`. 
     -   **Files_to_send** : Contains datasets that should be sent to project managers.
         -   *AmexGABMUSCSSurvey_YYYYMM_DATE.csv* - Final weighted dataset
         -   *USCS_Diagnostics_MONTH_YEAR.xlsx* - Contains important diagnostic sheets
             -   *Cell_Code_Freqs* - Frequency table of Cell codes to be sent to the operations manager
             -   *Main_Code_Freqs* - Main sample marketer code frequencies table to be sent to the operations manager
             -   *Removed_Tenure_or_Spend* - Contains observations deleted because of bad spend or tenure
+            -   *Removed_YOB* - Contains observations deleted before of bad ages (<18 or >120)
 
 # Preparatory Steps to do each Month
 
@@ -181,7 +178,7 @@ This sheet can be kept the same unless Nielsen has updated the DMA codes.
 
 The weighting segments sheet corresponds to the sheet *YEAR-USCS Targets QUARTER* in the latest `Weighting Target Summary for OPEN and USCS` excel file.
 
--   Copy columns E-K into the *Weighting_Segments* sheet. These correspond to columns named **SP_Code**, **Tenure**, **Spend** **X**, and **Weighting_Segment**.
+-   Copy columns E-K into the *Weighting_Segments* sheet. These correspond to columns named **SP_Code**, **Tenure**, **Spend** **X**, and **Weighting_Segment**. 
     -   Column **X** is not importance, hence the lack of name.
     -   If the columns E-K aren't aligned with this configuration, use your judgement to identify which column is which
 -   The scripts that perform the weighting DO NOT INFER ANYTHING. All required information must be present in the *Weighting_Segments* sheet prior to running the scripts. This means that extra information not contained in the `Weighting Target Summary` file must be included manually. I've only stumbled across two instances that require manual addition so far.
@@ -252,7 +249,7 @@ Find these by clicking on the tab right above the Console that probably says `\#
 
 ## Output
 
-- Currently, the script is outputted an HTML file that contains all the generated tables, warnings if checks are not passed, and success messages if the checks are passed. 
+- The script is outputted an HTML file that contains all the generated tables, warnings if checks are not passed, and success messages if the checks are passed. 
  - The warnings indicate a check is not met. 
    - These will be printouts with "Warning:" before them. 
    - If a check is passed, a message will be printed with "SUCCESS:" before it. 

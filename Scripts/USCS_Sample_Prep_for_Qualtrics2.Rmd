@@ -16,14 +16,6 @@ editor_options:
 
 -   Writes the 'All Sample' file
 
--   Starting in January 2013, we only had to send augment sample to
-    Research Now,
-
--   In April 2013, we had to start sending something to Cheetah Mail
-    again because CELL15 gets a 3:1 allocation,
-
--   In 2015 Cheetah Mail file started to get sent to Salesforce
-
 
 ```{r Load in Packages, message=F, warning=F}
 if (!require("pacman")) install.packages("pacman")
@@ -45,35 +37,15 @@ knitr::opts_chunk$set(results = "asis",
                       echo=TRUE)
 ```
 
-**THE FOLLOWING CHUNK DOES NOT NEED TO BE RUN IF YOU JUST RAN STEP 1 AND STILL HAVE THE 'main' AND 'augment' DATAFRAMES IN YOUR ENVIRONMENT**
+**THE FOLLOWING CHUNK DOES NOT NEED TO BE RUN IF YOU JUST RAN STEP 1 AND STILL HAVE THE 'USCS_Main' AND 'USCS_Augment' DATAFRAMES IN YOUR ENVIRONMENT**
 ```{r}
 # Load in the generated data sets from the first step (main and augment)
 load(f_str("../Data/unweighted_samples_{MONTH}_{YEAR}.Rdata"))
 ```
 
-
-```{r}
-main <- main %>% mutate(setx = 1)
-augment <- augment %>% mutate(setx = 2)
-
-et_tab <- augment %>% 
-  count(marketer_code, sp_code) %>%
-  spread(marketer_code, n, fill = 0) %>% 
-  make_nice_table("Augmented Sample Sp Code vs Marketer Code Freqs")
-  
-```
-
 ```{r message=F}
-combined <- full_join(main, augment) %>% 
-  mutate(cell_num = if_else(setx %in% c(2,3), 
-                            str_extract(naw_cell_code, "[0-9]{2}"), NA_character_),
-         creative = "")
-```
-
-```{r}
-cell_no_freq <- combined %>% freq_table("cell_num", "Cell Number Frequency")
-
-message(f_str("There are {sum(is.na(combined$raw_fico))} missing values for raw_fico"))
+# Combine main and augment samples
+USCS_Combined <- full_join(USCS_Main, USCS_Augment)
 ```
 
 
@@ -98,7 +70,7 @@ weight_conditions <- weight_conditions %>%
   # We first need to extract the sp codes (which are 3 digit numbers)
   # This extracts the sp codes into a list to account for if there are multiple codes associated with a single weighting segment
   mutate(sp_code = if_else(str_detect(sp_code, "[0-9]{3}"), 
-                           str_extract_all(sp_code, " [0-9]{3}"),
+                           str_extract_all(sp_code, "\\b[0-9]{3}(?![a-zA-Z])\\b"),
                            as.list(NA_character_))) %>% 
   
   # Extract tenure and spend conditions from excel's format
@@ -190,7 +162,7 @@ weight_conditions <- weight_conditions %>%
 ```{r}
 #  Apply the weighting conditions and generate the segments
 # This is taken all those conditions we generated in the previous chunk and put them together into a case when
-weighted_sample <- combined %>% 
+USCS_Weighted <- USCS_Combined %>% 
   mutate(weighting_segment = case_when(!!!rlang::parse_exprs(weight_conditions$full_cond)))
 ```
 
@@ -198,7 +170,7 @@ weighted_sample <- combined %>%
 
 ```{r}
 # Summary Stats by weighted segment
-weight_tab <- weighted_sample %>% 
+weight_tab <- USCS_Weighted %>% 
   group_by(weighting_segment) %>%
   summarize(sp_codes = paste(unique(marketer_code), collapse = ","),
             n = n(),
@@ -214,7 +186,7 @@ weight_tab <- weighted_sample %>%
   make_nice_table("Weighting Segments Summary Table")
 
 # Cross-tabulation of naw_cell_code, weighting_segment, and spcode
-weights_ncc_sp_code <- weighted_sample %>%
+weights_ncc_sp_code <- USCS_Weighted %>%
   freq_table(c('naw_cell_code', 'weighting_segment', 'sp_code'), 
              "Cross-tab of naw_cell_code, weighting_segment, and sp_code")
 
@@ -230,7 +202,7 @@ if (nrow(unweighted) > 0){
 #### Create New Variables
 
 ```{r NEW VARIABLES}
-weighted_sample <- weighted_sample %>%
+USCS_New_Vars <- USCS_Weighted %>%
   mutate(
     sv_spend = case_when(
       spend == "A" ~ 1,
@@ -514,48 +486,48 @@ weighted_sample <- weighted_sample %>%
 - Most of these need to be hand checked since they were created by the same formulas that would be used to check their correctness
 
 ```{r}
-fico <- table(weighted_sample$fico_range, weighted_sample$bf_fico_range, useNA = "ifany") %>% make_nice_table("FICO Range vs BF FICO Range")
-enroll <- table(weighted_sample$st_exp_enroll_in, weighted_sample$bf_st_exp_enroll_in, useNA = "ifany") %>% make_nice_table("st_exp_enroll_in vs bf_st_exp_enroll_in")
-myca_flag <- table(weighted_sample$myca_flag, weighted_sample$bf_myca_flg, useNA = "ifany") %>% make_nice_table("myca_flag vs bf_myca_flg")
-mr_in <- table(weighted_sample$mr_in, weighted_sample$bf_mr_in, useNA = "ifany") %>% make_nice_table("mr_in vs BF_mr_in")
+fico <- table(USCS_New_Vars$fico_range, USCS_New_Vars$bf_fico_range, useNA = "ifany") %>% make_nice_table("FICO Range vs BF FICO Range")
+enroll <- table(USCS_New_Vars$st_exp_enroll_in, USCS_New_Vars$bf_st_exp_enroll_in, useNA = "ifany") %>% make_nice_table("st_exp_enroll_in vs bf_st_exp_enroll_in")
+myca_flag <- table(USCS_New_Vars$myca_flag, USCS_New_Vars$bf_myca_flg, useNA = "ifany") %>% make_nice_table("myca_flag vs bf_myca_flg")
+mr_in <- table(USCS_New_Vars$mr_in, USCS_New_Vars$bf_mr_in, useNA = "ifany") %>% make_nice_table("mr_in vs BF_mr_in")
 
 
-cv_et <- weighted_sample %>% group_by_summary_table("cv_cs_et_type", "tenure_var") # *1 = tenure < 5, 2=tenure 5-15, 3=tenure > 15;
+cv_et <- USCS_New_Vars %>% group_by_summary_table("cv_cs_et_type", "tenure_var") # *1 = tenure < 5, 2=tenure 5-15, 3=tenure > 15;
 
-no_cv_cs_et <- weighted_sample %>% filter(is.na(cv_cs_et_type)) 
+no_cv_cs_et <- USCS_New_Vars %>% filter(is.na(cv_cs_et_type)) 
 
 if (nrow(no_cv_cs_et) > 0) warning("Missing CV CS ET Type")
 
 
-port_mc <- table(weighted_sample$marketer_code, weighted_sample$cv_portfolio, useNA = "ifany") %>% make_nice_table("cv_portfolio vs marketer_code")
-fee_mc <- table(weighted_sample$marketer_code, weighted_sample$cv_amex_has_fee, useNA = "ifany") %>% make_nice_table("cv_amex_has_fee vs marketer_code")
+port_mc <- table(USCS_New_Vars$marketer_code, USCS_New_Vars$cv_portfolio, useNA = "ifany") %>% make_nice_table("cv_portfolio vs marketer_code")
+fee_mc <- table(USCS_New_Vars$marketer_code, USCS_New_Vars$cv_amex_has_fee, useNA = "ifany") %>% make_nice_table("cv_amex_has_fee vs marketer_code")
 
-if (sum(is.na(weighted_sample$account_number)) > 0) warning("Missing account spend found")
+if (sum(is.na(USCS_New_Vars$account_number)) > 0) warning("Missing account spend found")
 
-tier_cat <- table(weighted_sample$mr_tier_prog_cd, weighted_sample$cv_mr_category, useNA = "ifany") %>% 
+tier_cat <- table(USCS_New_Vars$mr_tier_prog_cd, USCS_New_Vars$cv_mr_category, useNA = "ifany") %>% 
   make_nice_table("mr_tier_prog_cd vs cv_mr_category")
-aug_naw <- table(weighted_sample$cv_augment_sample, weighted_sample$naw_cell_code, useNA = "ifany") %>% 
+aug_naw <- table(USCS_New_Vars$cv_augment_sample, USCS_New_Vars$naw_cell_code, useNA = "ifany") %>% 
   make_nice_table("cv_augment_sample vs naw_cell_code")
 
 
-if(weighted_sample %>% 
+if(USCS_New_Vars %>% 
    filter(replace_na(best_dma_cd,"") %in% c('','999','0')) %>% 
    nrow() > 0) warning("DMA_CD contains missing val, blank, 0 or 999")
 
-if(weighted_sample %>% 
+if(USCS_New_Vars %>% 
    filter(replace_na(best_dma,"") %in% c('','999','0')) %>% 
    nrow() > 0) warning("DMA contains missing val, blank, 0 or 999")
 
-yobs <- weighted_sample %>% mutate(age = ceiling(raw_age)) %>% 
+yobs <- USCS_New_Vars %>% mutate(age = ceiling(raw_age)) %>% 
   distinct(dInterviewDate, dYOB, age, year_of_birth) %>%
   arrange(age) %>% 
   make_nice_table("Checking year of birth calculations") # Are ages correct
 
-gens <- weighted_sample %>% distinct(year_of_birth, generation) %>% 
+gens <- USCS_New_Vars %>% distinct(year_of_birth, generation) %>% 
   arrange(year_of_birth) %>% 
   make_nice_table("Checking Generation calculations")
 
-fico <- weighted_sample %>% distinct(raw_fico, bdl_fico_bucket) %>% 
+fico <- USCS_New_Vars %>% distinct(raw_fico, bdl_fico_bucket) %>% 
   arrange(bdl_fico_bucket, raw_fico) %>% 
   make_nice_table("Checking FICO Bucket")
 ```
@@ -563,7 +535,7 @@ fico <- weighted_sample %>% distinct(raw_fico, bdl_fico_bucket) %>%
 
 ```{r}
 # Identify people with missing first and last names
-miss_name <- weighted_sample %>% 
+miss_name <- USCS_New_Vars %>% 
   filter(is.na(first_nm) | is.na(last_nm)) %>% 
   dplyr::select(customer_id,first_nm, last_nm)
 
@@ -578,7 +550,7 @@ if (nrow(miss_name) > 0){
 
 ```{r}
 # Fill in the blank names with "Valued Card Member" because First and Last name are now included in the AllSample file
-weighted_sample <- weighted_sample %>% 
+USCS_New_Vars <- USCS_New_Vars %>% 
   mutate(name_tmp = is.na(first_nm) | is.na(last_nm) | nchar(first_nm) == 10,
     first_nm = if_else(name_tmp,
                        "Valued Card",
@@ -589,10 +561,7 @@ weighted_sample <- weighted_sample %>%
 ```
 
 ```{r message=F}
-# *Read in Subject Line Code Info from file which Brent sent on 1.15.20.
-# This file will be provided by Brent each _____;
-# *removed duplicate entries of LNU and MV5 and saved csv file with date of 1125;
-# *There are now 1758 entries in the Sunjectline insert csv file received on 06.30.2020;
+# Read in Subject Line Code Info
 
 subject_line_insert_info <- read_csv(SUBJECT_LINE_PATH) %>% 
   set_names(c('ia_id', 'sv_subject_line_insert'))
@@ -601,11 +570,11 @@ subject_line_insert_info <- read_csv(SUBJECT_LINE_PATH) %>%
 - check if there are records that did not match with the Subject line insert file;
 
 ```{r}
-# * check if there are records that did not match with the Subject line insert file;
-weighted_sample <- weighted_sample %>% 
+# check if there are records that did not match with the Subject line insert file
+USCS_New_Vars <- USCS_New_Vars %>% 
   left_join(subject_line_insert_info, by = "ia_id")
 
-miss_inserts <- weighted_sample[is.na(weighted_sample$sv_subject_line_insert),]
+miss_inserts <- USCS_New_Vars[is.na(USCS_New_Vars$sv_subject_line_insert),]
 if(nrow(miss_inserts) > 0){
   warning("Missing subject line inserts")
   print(miss_inserts %>% dplyr::select(customer_id, sv_subject_line_insert))
@@ -616,14 +585,14 @@ if(nrow(miss_inserts) > 0){
 ```
 
 ```{r}
-ia_subline_freq <- weighted_sample %>% 
+ia_subline_freq <- USCS_New_Vars %>% 
   freq_table(c("ia_id", "sv_subject_line_insert"), 
              "Freq table IA ID vs Subject Line insert")
 ```
 
 ```{r message = F}
 # Create new variable and replace empty values with "American Express Card"
-weighted_sample <- weighted_sample %>% 
+USCS_New_Vars <- USCS_New_Vars %>% 
   mutate(sv_subject_line_insert = if_else(sv_subject_line_insert == "", 
                                           "American Express Card", sv_subject_line_insert))
 
@@ -633,15 +602,15 @@ card_art_info <- read_csv(CARD_ART_PATH) %>%
                 sv_card_art = SV_CARD_ART)
 
 # Merge data
-weighted_sample <- weighted_sample %>% left_join(card_art_info)
+USCS_New_Vars <- USCS_New_Vars %>% left_join(card_art_info)
 
-sp_sv_card_freq <- weighted_sample %>% 
+sp_sv_card_freq <- USCS_New_Vars %>% 
   freq_table(c("marketer_code","sv_card_art"), "SP Code vs SV Card Freq Table")
 ```
 
 ```{r}
 # Change all date columns to "M/D/YYYY" format
-weighted_sample <- weighted_sample %>% 
+USCS_New_Vars <- USCS_New_Vars %>% 
   mutate(across(c("setup_dt",
                   'card_anniv_dt',
                   'mr_init_enroll_dt'), ~format(as.Date(.x), format = "%m/%d/%Y")),
@@ -654,7 +623,7 @@ weighted_sample <- weighted_sample %>%
 
 ```{r message=F}
 # Merging the data frames
-final <- weighted_sample %>% 
+USCS_Final <- USCS_New_Vars %>% 
   arrange(naw_cell_code, marketer_code, spend, tenure_cat) %>% # Sort Data 
   set_names(str_to_upper(names(.))) %>% 
   # Choose only desired variables and name them how we want them named
@@ -738,7 +707,7 @@ final <- weighted_sample %>%
 
 ```{r Reformatting}
 # Final rounding to get the data in the format that Qualtrics is expecting
-final <- final %>% mutate(
+USCS_Final <- USCS_Final %>% mutate(
          BF_GMPI_BASE_CUST_ID = substr(BF_GMPI_BASE_CUST_ID, 5, 19), # We only want 15 digits
          across(c("BF_ACCOUNT_SPEND",
                   'BF_SIZE_OF_WALLET',
@@ -747,13 +716,15 @@ final <- final %>% mutate(
                   "BDL_AGE",
                   "SV_PRODUCT_TENURE"), ~round(., 2)),
          CV_BF_ACCOUNT_SHARE_OF_WALLET = txt_sprintf("%.14f", CV_BF_ACCOUNT_SHARE_OF_WALLET),
-         across(c('BF_CARD_ANNIV_DT', "BF_CARD_ANNIV_YEAR", "BF_CARD_ANNIV_MONTH"), ~ifelse(. == "" | is.na(.), "REF", .))
+         across(c('BF_CARD_ANNIV_DT', "BF_CARD_ANNIV_YEAR", "BF_CARD_ANNIV_MONTH"), ~ifelse(. == "" | is.na(.), "REF", .)) # Make missing values "REF"
 )
 ```
 
 ```{r}
 MONTH_STR <- sprintf("%02d", MONTH_NO)
-final %>% write_csv("../Files_to_send/AmexGABMUSCSSurvey_{YEAR}{MONTH_STR}_{Sys.Date()}.csv" %>% f_str(), na ="")
+USCS_Final %>% write_csv("../Files_to_send/AmexGABMUSCSSurvey_{YEAR}{MONTH_STR}_{Sys.Date()}.csv" %>% f_str(), na ="")
+```
 
-rm.all.but(keep=c('final'))
+```{r }
+rm.all.but(keep=c('USCS_Final'))
 ```

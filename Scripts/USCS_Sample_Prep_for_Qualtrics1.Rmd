@@ -43,7 +43,7 @@ options(scipen = 99999, # Remove scientific notation
 knitr::opts_chunk$set(results = "asis", # Prints html tables nicely
                       echo=TRUE) # Show all code chunks in the output
 
-output_wb <- createWorkbook()
+Diagnostic_WB <- createWorkbook()
 ```
 
 ### Data Loading
@@ -228,8 +228,8 @@ main_code_freq <- USCS_Base %>%
              caption = "Marketer Code Frequencies for Main Cell Codes")
 
 # Write to excel to send to OPS Manager
-addWorksheet(output_wb, "Main_Code_Freqs")
-writeData(output_wb, "Main_Code_Freqs", main_code_freq)
+addWorksheet(Diagnostic_WB, "Main_Code_Freqs")
+writeData(Diagnostic_WB, "Main_Code_Freqs", main_code_freq)
 ```
 
 ```{r}
@@ -245,13 +245,13 @@ cell_code_freq <- cell_code_freq %>%
   arrange(str_extract(cell_code, "[0-9]{2}"))
 
 # Save to output excel file to be sent to PM
-addWorksheet(output_wb, "Cell_Code_Freqs")
-writeData(output_wb, "Cell_Code_Freqs", cell_code_freq)
+addWorksheet(Diagnostic_WB, "Cell_Code_Freqs")
+writeData(Diagnostic_WB, "Cell_Code_Freqs", cell_code_freq)
 
 ccf <- cell_code_freq %>% 
   make_nice_table("Cell Code Frequencies with NAW Cell Codes")
 
-saveWorkbook(output_wb, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_{YEAR}.xlsx"), overwrite = TRUE)
+saveWorkbook(Diagnostic_WB, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_{YEAR}.xlsx"), overwrite = TRUE)
 ```
 
 ### Check for duplicates
@@ -411,18 +411,16 @@ save(USCS_Sample, file="../Data/USCS_Sample_Preremovals.Rdata")
       - Note this sheet will be empty if there are no observations removed
 
 ```{r}
-wrong_yob <- USCS_Sample %>% filter(raw_age < 18 | raw_age > 120) %>% 
+wrong_yob <- USCS_Sample %>% filter(!is.na(raw_age) & (raw_age < 18 | raw_age > 120)) %>% 
   select(gmpi_base_cust_id, marketer_code, naw_cell_code, raw_age, setup_dt, card_anniv_dt)
 
 if (nrow(wrong_yob) > 0){
-  warning(f_str('There were {nrow(wrong_yob)} people who are too young (<18)'))
-  warning("These people are automatically removed from the sample and put into the Diagnostic Excel file. Verify with the PM if they are okay with these being removed. If not, comment out the anti_join line in this chunk when rerunning the script.")
+  warning(f_str('There were {nrow(wrong_yob)} people who are too young (<18) or too old(>120'))
+  warning("Verify with the PM if they are okay with these being removed in the email at the end of this script")
   
   # Save the removals to the output workbook
-  addWorksheet(output_wb, "Removed_YOB")
-  writeData(output_wb, "Removed_YOB", wrong_yob) 
-  # Remove the samples
-  USCS_Sample <- USCS_Sample %>% anti_join(wrong_yob, by = 'gmpi_base_cust_id') # Line to comment out if PM does not want these samples removed
+  addWorksheet(Diagnostic_WB, "Removed_YOB")
+  writeData(Diagnostic_WB, "Removed_YOB", wrong_yob) 
 }
 ```
 
@@ -728,15 +726,15 @@ tenure_spend_check <- USCS_Augment %>%
 
 
 if (nrow(tenure_spend_check) > 0){
-  warning(f_str("There are {nrow(tenure_spend_check)} people deleted in the augment file due to bad account spends or tenures. These will be found in the `Files_to_send/USCS_Diagnostics_MONTH_YEAR.xlsx` file"))
-  USCS_Augment <- USCS_Augment %>% anti_join(tenure_spend_check, by = "gmpi_base_cust_id") # Comment this out if not removing
+  warning(f_str("There are {nrow(tenure_spend_check)} people flagged for deletion in the augment file due to bad account spends or tenures. These will be found in the `Files_to_send/USCS_Diagnostics_MONTH_YEAR.xlsx` file. Verify with the PM if they are okay with these being removed in the email at the end of this script"))
+
 } else{
   message("SUCCESS: NO people deleted due to bad account spends or tenure in the augment file")
 }
  
-addWorksheet(output_wb, "Removed_Tenure_or_Spend")
-writeData(output_wb, "Removed_Tenure_or_Spend", tenure_spend_check) 
-saveWorkbook(output_wb, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_{YEAR}.xlsx"), overwrite = TRUE)
+addWorksheet(Diagnostic_WB, "Removed_Tenure_or_Spend")
+writeData(Diagnostic_WB, "Removed_Tenure_or_Spend", tenure_spend_check) 
+saveWorkbook(Diagnostic_WB, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_{YEAR}.xlsx"), overwrite = TRUE)
 ```
 
 ```{r SUBJECT LINE}
@@ -790,13 +788,21 @@ Best,
 Beck
 
 
-**IF THEY SAY YOU SHOULD NOT REMOVE CERTAIN PEOPLE**
-  - Go back to the section titled "Saving and Loading dataframe before removals"
-  - Uncomment the line that loads in the `all_premoved.Rdata` file
-    - This will overwrite the all dataframe in your environment to the version before anything was removed
-    - Modify the code to not remove the people who should not be removed
-      - Hopefully it's as simple as comment out one of the "ant-Join" statements
+**IF THEY SAY YOU CAN REMOVE ALL THOSE PEOPLE**
+  - Run the next chunk
 
+**IF THEY SAY YOU SHOULD NOT REMOVE CERTAIN PEOPLE**
+  - Comment out certain lines in the next chunk to not remove them
+
+
+```{r}
+# Remove bad YOB
+USCS_Main <- USCS_Main %>% anti_join(wrong_yob, by = 'gmpi_base_cust_id') # Line to comment out if PM does not want these samples removed
+USCS_Augment <- USCS_Augment %>% anti_join(wrong_yob, by = 'gmpi_base_cust_id') # Line to comment out if PM does not want these samples removed
+
+# Removing Bad tenure and Spend
+USCS_Augment <- USCS_Augment %>% anti_join(tenure_spend_check, by = "gmpi_base_cust_id") # Comment this out if not removing
+```
 
 ```{r message=FALSE}
 # IF YOU ARE RUNNING `USCS_Weighting.Rmd` right after this, run this chunk and then you DO NOT have to reload in the data with the step `load(f_str("../Data/unweighted_samples_{MONTH}_{YEAR}.Rdata"))`

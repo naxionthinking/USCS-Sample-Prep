@@ -244,7 +244,7 @@ load_base <- function(){
   
   # We use df_info to load in the file properly
   readr::read_fwf(file = BASE_PATH,
-                  #skip = 2, # If the raw file contains the funky lines on top, include a skip
+                  skip = 2, # If the raw file contains the funky lines on top, include a skip
                   col_positions = fwf_widths(df_info$col_widths),
                   col_types = paste0(df_info$col_types, collapse = ""), # collapses into something like 'cccnnnccc'
                   na = c("")) %>% # What missing values are represented as in the text file
@@ -308,7 +308,7 @@ load_spend <- function(){
   
    # We use df_info to load in the file properly
    readr::read_fwf(file = SPEND_PATH,
-                   #skip = 2, # If the raw file contains the funky lines on top, include a skip
+                   skip = 2, # If the raw file contains the funky lines on top, include a skip
                    show_col_types = FALSE,
                    col_positions = fwf_widths(df_info$col_widths),
                    col_types = paste0(df_info$col_types, collapse = ""), # collapses into something like 'cccnnnccc'

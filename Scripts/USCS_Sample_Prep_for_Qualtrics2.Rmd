@@ -204,6 +204,8 @@ if (nrow(unweighted) > 0){
 ```{r NEW VARIABLES}
 USCS_New_Vars <- USCS_Weighted %>%
   mutate(
+    cell_num = if_else(naw_type == 'AUGMENT', 
+                            str_extract(naw_cell_code, "[0-9]{2}"), NA_character_),
     sv_spend = case_when(
       spend == "A" ~ 1,
       spend == "B" ~ 2,
@@ -725,6 +727,16 @@ MONTH_STR <- sprintf("%02d", MONTH_NO)
 USCS_Final %>% write_csv("../Files_to_send/AmexGABMUSCSSurvey_{YEAR}{MONTH_STR}_{Sys.Date()}.csv" %>% f_str(), na ="")
 ```
 
+```{r}
+# Store final dataset for ease of loading in formats
+save(USCS_Final, file=f_str("../Data/USCS_final{MONTH}_{YEAR}.Rdata"))
+```
+
 ```{r }
 rm.all.but(keep=c('USCS_Final'))
+```
+
+```{r}
+# Load final dataset for quick checks if needed
+load(f_str("../Data/USCS_final{MONTH}_{YEAR}.Rdata"))
 ```

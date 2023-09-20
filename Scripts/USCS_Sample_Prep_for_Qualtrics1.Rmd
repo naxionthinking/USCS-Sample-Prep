@@ -120,7 +120,7 @@ cell_code_freq <- USCS_Base %>%
 # Main Survey has 'Cell_Codes' that start with 'CCSG' 
 main_survey_ccs <- cell_code_freq %>% filter(str_starts(cell_code, "CCSG")) 
 aug_survey_ccs <- cell_code_freq %>% 
-  filter(!str_starts(cell_code, "CCSG") & str_starts(cell_code, "C"))
+  filter(!str_starts(cell_code, "CCSG"))
 ```
 
 ```{r message=FALSE}
@@ -411,11 +411,11 @@ save(USCS_Sample, file="../Data/USCS_Sample_Preremovals.Rdata")
       - Note this sheet will be empty if there are no observations removed
 
 ```{r}
-wrong_yob <- USCS_Sample %>% filter(!is.na(raw_age) & (raw_age < 18 | raw_age > 120)) %>% 
+wrong_yob <- USCS_Sample %>% filter(!is.na(raw_age) & (raw_age > 120 & raw_age < 2000)) %>% 
   select(gmpi_base_cust_id, marketer_code, naw_cell_code, raw_age, setup_dt, card_anniv_dt)
 
 if (nrow(wrong_yob) > 0){
-  warning(f_str('There were {nrow(wrong_yob)} people who are too young (<18) or too old(>120'))
+  warning(f_str('There were {nrow(wrong_yob)} people who are too old(>120'))
   warning("Verify with the PM if they are okay with these being removed in the email at the end of this script")
   
   # Save the removals to the output workbook
@@ -758,11 +758,6 @@ sel_sbj_line <- USCS_Augment %>%
   freq_table(c("selected", "subject_line"), "Selected vs Subject Line Freqs")
 ```
 
-```{r}
-# Store important sample datasets for the second script.
-save(USCS_Augment, USCS_Main, file=f_str("../Data/unweighted_samples_{MONTH}_{YEAR}.Rdata"))
-```
-
 **ACTION NEEDED. STOP HERE**
 
 - Now that you completed the first step of the sample prep, write an email to the PM.
@@ -802,6 +797,11 @@ USCS_Augment <- USCS_Augment %>% anti_join(wrong_yob, by = 'gmpi_base_cust_id') 
 
 # Removing Bad tenure and Spend
 USCS_Augment <- USCS_Augment %>% anti_join(tenure_spend_check, by = "gmpi_base_cust_id") # Comment this out if not removing
+```
+
+```{r}
+# Store important sample datasets for the second script.
+save(USCS_Augment, USCS_Main, file=f_str("../Data/unweighted_samples_{MONTH}_{YEAR}.Rdata"))
 ```
 
 ```{r message=FALSE}

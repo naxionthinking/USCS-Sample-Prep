@@ -31,13 +31,12 @@ Now you are "inside" this folder
 3.  Run the following command to clone the `master` branch:
     - This will create a clone of the template repository in the directory you specified above
 ```
-git clone https://github.com/Beck-DeYoung-NA/USCS-Sample-Prep.git --branch main --single-branch
+git clone https://github.com/Beck-DeYoung-NA/USCS-Sample-Prep.git --branch main --single-branch .
 ```
 4. Navigate into the new directory
 
-```
-cd USCS-Sample-Prep
-```
+Previously, you had to navigate into the new directory, but now the files populate the parent folder so we don't have to do that. 
+
 ### Creating a new branch
 
 We now create a new branch, which just means that you can store the changes made the scripts and files this month without changing anything done in previous months or to the template.  

@@ -204,8 +204,9 @@ if (nrow(unweighted) > 0){
 ```{r NEW VARIABLES}
 USCS_New_Vars <- USCS_Weighted %>%
   mutate(
-    cell_num = if_else(naw_type == 'AUGMENT', 
-                            str_extract(naw_cell_code, "[0-9]{2}"), NA_character_),
+    # Updated December 2023 to have "NULL" as default
+    sv_augment_cell = if_else(naw_type == 'AUGMENT', 
+                            str_extract(naw_cell_code, "[0-9]{2}"), "NULL"),
     sv_spend = case_when(
       spend == "A" ~ 1,
       spend == "B" ~ 2,
@@ -667,7 +668,7 @@ USCS_Final <- USCS_New_Vars %>%
                 BF_TOT_LOC_INT_MTH_NO = TOT_LOC_INT_MTH_NO,
                 BF_TOT_LOC_AM = TOT_LOC_AM,
                 SV_SP_CODE = SP_CODE,
-                SV_AUGMENT_CELL = CELL_NUM,
+                SV_AUGMENT_CELL,
                 SV_STUDY_OPENEND = MV_NPS_IND,
                 SV_MR_IN = MR_IN_N,
                 SV_TENURE_QUANT = TENURE_VAR,

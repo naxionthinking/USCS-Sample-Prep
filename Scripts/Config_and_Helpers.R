@@ -33,7 +33,7 @@ MONTH <- month.abb[MONTH_NO] %>% str_to_upper()
 SAMPLE_PREP_PATH <- "../Sample_Prep_Helper_{MONTH}_{YEAR}.xlsx" %>% f_str() 
 
 ## This is where the raw files lie. Only thing I've seen change is sometimes "raw" is "raw files"
-RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}_{str_pad(MONTH_NO,2,pad="0")}/raw' %>% f_str() 
+RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}/{YEAR}_{str_pad(MONTH_NO,2,pad="0")}/raw' %>% f_str() 
 
 ## Paste in the name of the base and spend text files after the "/"
 BASE_PATH <- '{RAW_FILES_PATH}/' %>% f_str() # LET.NATLANAL.X80A3.BASE.Jan23-cleaned.txt

@@ -415,7 +415,7 @@ wrong_yob <- USCS_Sample %>% filter(!is.na(raw_age) & (raw_age > 120 & raw_age <
   select(gmpi_base_cust_id, marketer_code, naw_cell_code, raw_age, setup_dt, card_anniv_dt)
 
 if (nrow(wrong_yob) > 0){
-  warning(f_str('There were {nrow(wrong_yob)} people who are too old(>120'))
+  warning(f_str('There were {nrow(wrong_yob)} people who are too old(>120) | '))
   warning("Verify with the PM if they are okay with these being removed in the email at the end of this script")
   
   # Save the removals to the output workbook

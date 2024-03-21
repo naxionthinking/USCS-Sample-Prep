@@ -734,10 +734,10 @@ save(USCS_Final, file=f_str("../Data/USCS_final{MONTH}_{YEAR}.Rdata"))
 ```
 
 ```{r }
-rm.all.but(keep=c('USCS_Final'))
+rm.all.but(keep=c('USCS_Final', 'MONTH', 'YEAR'))
 ```
 
 ```{r}
 # Load final dataset for quick checks if needed
-load(f_str("../Data/USCS_final{MONTH}_{YEAR}.Rdata"))
+# load(f_str("../Data/USCS_final{MONTH}_{YEAR}.Rdata"))
 ```

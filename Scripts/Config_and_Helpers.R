@@ -19,7 +19,7 @@ f_str <- function(str) str %>% glue() %>% as.character()
 # ------------------------------------------------------------------------------
 # VARIABLES TO UPDATE
 # ------------------------------------------------------------------------------
-YEAR <- 2023 # UPDATE
+YEAR <- 2024 # UPDATE
 MONTH_NO <- 02 # UPDATE
 
 # Get the 3 letter abbreviation (i.e, "JAN") used for file naming
@@ -35,18 +35,31 @@ SAMPLE_PREP_PATH <- "../Sample_Prep_Helper_{MONTH}_{YEAR}.xlsx" %>% f_str()
 ## This is where the raw files lie. Only thing I've seen change is sometimes "raw" is "raw files"
 RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}/{YEAR}_{str_pad(MONTH_NO,2,pad="0")}/raw' %>% f_str() 
 
-## Paste in the name of the base and spend text files after the "/"
-BASE_PATH <- '{RAW_FILES_PATH}/' %>% f_str() # LET.NATLANAL.X80A3.BASE.Jan23-cleaned.txt
-SPEND_PATH <- '{RAW_FILES_PATH}/' %>% f_str() # LET.NATLANAL.X80A4.SPEND.Jan23-cleaned.txt
+# Get base and spend files
+raw_files <- list.files(RAW_FILES_PATH)
+base_file <- raw_files[str_detect(raw_files, "BASE")]
+spend_file <- raw_files[str_detect(raw_files, "SPEND")]
+
+if (length(base_file) == 0) stop("Base file not found")
+if (length(spend_file) == 0) stop("Spend file not found")
+
+# If there are errors, paste in the file yourself
+
+# base_file <- ""
+# spend_file <- ""
+
+
+BASE_PATH <- '{RAW_FILES_PATH}/{base_file}' %>% f_str()
+SPEND_PATH <- '{RAW_FILES_PATH}/{spend_file}' %>% f_str() 
 
 ## This uses relative paths to find the file lookups folder. Theoretically, it should always be 3 folders back, but change if not
 FILE_LOOKUPS <- f_str("../../../File Lookups")# L:/Amex.549/Sample/2023/File Lookups
 
 ## Change file names if they change
-OPEN_SEG_PATH <-       "{FILE_LOOKUPS}/Managed_2022_segment_SAT 06232022.csv"  %>% f_str()
+OPEN_SEG_PATH <-       "{FILE_LOOKUPS}/Managed File 2023 062923.csv"  %>% f_str()
 SUBJECT_LINE_PATH <-   "{FILE_LOOKUPS}/MarketVoice - Card Lookup20230124_ForAnalytics.csv"  %>% f_str()
 # CENTURION_TIER_PATH <- "{FILE_LOOKUPS}/760_CENTURION_TIER_CVs.csv" %>% f_str() # No longer used
-CARD_ART_PATH <-       "{FILE_LOOKUPS}/Card Art URLs 20230124.csv" %>% f_str()
+CARD_ART_PATH <-       "{FILE_LOOKUPS}/Card Art URLs 20230929.csv" %>% f_str()
 
 # ------------------------------------------------------------------------------
 

@@ -64,7 +64,9 @@ weight_conditions <- read_excel(SAMPLE_PREP_PATH,
                       sheet = "Weighting_Segments",
                       na = c("", "n/a")) %>% 
   # Drop empty rows
-  drop_na(sp_code)
+  drop_na(sp_code) %>% 
+  # Drop unused columns
+  select(-starts_with("X"))
 
 weight_conditions <- weight_conditions %>% 
   # We first need to extract the sp codes (which are 3 digit numbers)

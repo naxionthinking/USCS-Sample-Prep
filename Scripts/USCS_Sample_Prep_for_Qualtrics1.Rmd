@@ -129,7 +129,10 @@ req_sp_codes <- read_excel(SAMPLE_PREP_PATH,
                            sheet = "Sp_Code_Freqs") %>% 
   set_names(c("sp_code", "card_name", "Total")) %>% 
   drop_na(sp_code) %>% # Remove blank spaces if they were kept in
-  mutate(sp_code = glue("SP{sp_code}"))
+  mutate(sp_code = glue("SP{sp_code}")) %>% 
+  # If blank spaces were loaded in, the columns might be characters when we want them to be numbers, this will fix that
+  type_convert()
+  
 ```
 
 ```{r}

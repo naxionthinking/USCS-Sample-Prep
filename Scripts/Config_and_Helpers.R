@@ -37,13 +37,14 @@ RAW_FILES_PATH <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}/{YEAR}_{str_pad(MONT
 
 # Get base and spend files
 raw_files <- list.files(RAW_FILES_PATH)
+
 base_file <- raw_files[str_detect(raw_files, "BASE")]
 spend_file <- raw_files[str_detect(raw_files, "SPEND")]
 
 if (length(base_file) == 0) stop("Base file not found")
 if (length(spend_file) == 0) stop("Spend file not found")
 
-# If there are errors, paste in the file yourself
+# If there are errors, paste in the file yourself and comment the above out
 
 # base_file <- ""
 # spend_file <- ""

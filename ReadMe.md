@@ -26,13 +26,28 @@ For example, for February 2023, you would run
 ```
 cd \\sys_op\methods\Amex.549\Sample\2023\2023-02\
 ```
-Now you are "inside" this folder
+Now you are "inside" this folder. You can also navigate to the folder in File Explorer, right click once you're inside, and click on "Open in Terminal"
 
 3.  Run the following command to clone the `master` branch:
     - This will create a clone of the template repository in the directory you specified above
 ```
-git clone https://github.com/Beck-DeYoung-NA/USCS-Sample-Prep.git --branch main --single-branch .
+git clone https://github.com/Beck-DeYoung-NA/USCS-Sample-Prep.git --branch main --single-branch
 ```
+4. That's it. Now a new folder called "USCS_Sample_Prep" has been created with all the files and scripts you need.
+
+P.S., if you are doing this task a lot and do not want to always consult the readMe for the cloning command, you can create an alias.
+
+```
+git config --global alias.uscs "clone https://github.com/Beck-DeYoung-NA/USCS-Sample-Prep.git --branch main --single-branch"
+```
+
+This will create a new git command for you, so to clone the repository you just need to run
+
+```
+git uscs
+```
+
+<!-- 
 4. Navigate into the new directory
 
 Previously, you had to navigate into the new directory, but now the files populate the parent folder so we don't have to do that. 
@@ -53,7 +68,7 @@ git checkout -b USCS_Feb_2023
 ```
 
 I've removed all information on updating branches and establishing a connection with github for simplicity. It is not necessary to push the changes to github each month. It only matters that the template file is updated if recurrent changes need to be made. So from this point on, no more git is needed after the folder is downloaded. If you want to see the documentation, open the readMe.md file rather than viewing it on GitHub. The documentation is below in a comment that does not show up when just viewing.
-<!-- 
+
 6. Now establish the connection with github. If you have not authenticated github previously, you will have to do so after running this line (a log in will pop up). Remeber to replace \<Month> and \<Year>
 
 ```
@@ -112,7 +127,10 @@ As a note, Rstudio has version control integrated into it with a user interface.
         -   `USCS_Sample_Prep_for_Qualtrics2.Rmd` - Segments the data based on desired weights and creates new variables. Also contains validation checks. (Replaces step 3)
     -   **Data** : Where all intermediary storage files are outputted. These are for convenience of faster loading and are not sent to anyone.
         -   *USCS_Sample_Preremovals.Rdata* - Version of **USCS_Sample** dataframe before removals are made for bad tenure, spend, or date of birth. This is stored to make it easier to revert to the original dataframe if the PM does not want certain people removed
-        -   *unweighted_samples_MONTH_YEAR.Rdata* - Contains augmented and main samples created by `USCS_Sample_Prep_for_Qualtrics1.Rmd` for faster loading into `USCS_Sample_Prep_for_Qualtrics2.Rmd`. 
+        -   *unweighted_samples_MONTH_YEAR.Rdata* - Contains augmented and main samples created by `USCS_Sample_Prep_for_Qualtrics1.Rmd` for faster loading into `USCS_Sample_Prep_for_Qualtrics2.Rmd`.
+    -   **Helper_Files** : Where to store the files used to create the Sample_Prep_Helper excel
+        - *Weighting File* : Contains weights for the given quarter
+        - *MainFileBuildAugments_NA* : Contains augment specs and SP Code specs  
     -   **Files_to_send** : Contains datasets that should be sent to project managers.
         -   *AmexGABMUSCSSurvey_YYYYMM_DATE.csv* - Final weighted dataset
         -   *USCS_Diagnostics_MONTH_YEAR.xlsx* - Contains important diagnostic sheets
@@ -175,7 +193,7 @@ This sheet can be kept the same unless Nielsen has updated the DMA codes.
 
 4.  *Weighting_Segments*
 
-The weighting segments sheet corresponds to the sheet *YEAR-USCS Targets QUARTER* in the latest `Weighting Target Summary for OPEN and USCS` excel file.
+The weighting segments sheet corresponds to the sheet *YEAR-USCS Targets QUARTER* in the latest `Weighting Target Summary for OPEN and USCS` excel file. You can typically find this in the OPEN where you initially cloned USCS_Sample_Prep.
 
 -   Copy columns E-K into the *Weighting_Segments* sheet. These correspond to columns named **SP_Code**, **Tenure**, **Spend** **X**, and **Weighting_Segment**. 
     -   Column **X** is not importance, hence the lack of name.

@@ -359,13 +359,13 @@ USCS_New_Vars <- USCS_Weighted %>%
     bf_card_anniv_year = year(anniv),
     bf_card_anniv_month = month(anniv),
        
-    # Card setup date
-    setup_dt = if_else(setup_dt == "0001-01-01",
-                       NA_character_, setup_dt),
-    setup = as_date(setup_dt, format = "%Y-%m-%d"),
-    bf_setup_year = year(setup),
-    bf_setup_month = month(setup),
-    bf_setup_day = day(setup),
+    # Card setup date (this is done in the previous script when tenure is created)
+    # setup_dt = if_else(setup_dt == "0001-01-01",
+    #                    NA_character_, setup_dt),
+    # setup = as_date(setup_dt, format = "%Y-%m-%d"),
+    # bf_setup_year = year(setup),
+    # bf_setup_month = month(setup),
+    # bf_setup_day = day(setup),
        
     # Prog Enter Date
     mr_init_enroll_dt = if_else(mr_init_enroll_dt == "0001-01-01",

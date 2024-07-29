@@ -156,9 +156,6 @@ if (nrow(missing_ccs) > 0) {
 
 ### Check to make sure everyone has a spend and tenure and new-product-tenure.
 
--   cell_code 68 can have any marketer code but if it does have 135, notify
-    PM
-
 ```{r}
 # Check missing account spend and tenure
 miss_spend_and_ten <- USCS_Base %>% dplyr::select(account_spend, t_add) %>% 
@@ -194,21 +191,6 @@ if (nrow(miss_marketer_code) > 0){
 }else{
   message("SUCCESS: No missing marketer codes")
 }
-
-cn68_market_codes <- USCS_Base[USCS_Base$cell_code == 'CN68',] %>% 
-  dplyr::select(cell_code, marketer_code) %>% 
-  mutate(is_not_sp135 = marketer_code != "SP135")
-
-if (nrow(cn68_market_codes) > 0){
-  warning("There are observations with Cell Code 'CN68'")
-  if (sum(cn68_market_codes$is_not_sp135) > 0){
-  warning("Not all marketer codes are SP135 for cell codes CN68. Alert OPS/PM") 
-  } else {
-    message("ITS OKAY because all marketer codes are SP135")
-  }
-} else{
-    message("SUCCESS: No observations with Cell Code 'CN68'")
-  }
 ```
 
 
@@ -287,10 +269,16 @@ if (nrow(USCS_Spend_dupes) > 0){
 ```{r}
  # Left join ensures only USCS_Base matters, If spend matters again, change to inner_join
 USCS_Sample <- left_join(USCS_Base, USCS_Spend, by = "gmpi_base_cust_id") %>%
-  mutate(setup_year = substr(setup_dt, 1, 4) %>% as.numeric(),
-         setup_month = substr(setup_dt, 6,7) %>% as.numeric(),
-         tenure_var = 12*(YEAR-1-setup_year)+(MONTH_NO+12-setup_month),
-         account_spend = as.numeric(account_spend),
+  mutate(
+          setup_dt = if_else(setup_dt == "0001-01-01",
+                       NA_character_, setup_dt),
+          setup = as_date(setup_dt, format = "%Y-%m-%d"),
+          bf_setup_year = year(setup),
+          bf_setup_month = month(setup),
+          bf_setup_day = day(setup),
+         
+         tenure_var = 12*(YEAR-1-bf_setup_year)+(MONTH_NO+12-bf_setup_month),
+
          tenure_cat = case_when(
            tenure_var <   5 ~ 1,
            tenure_var <  16 ~ 2,
@@ -314,10 +302,6 @@ USCS_Sample <- left_join(USCS_Base, USCS_Spend, by = "gmpi_base_cust_id") %>%
            account_spend < 35000 ~ "H",
            account_spend < 50000 ~ "I",
            TRUE ~ "J"),
-         
-         top_spender = if_else(account_spend < 50000, 0, 1),
-         # Spend cat3 is the numeric value of the account spend's alphabet positions (A:1, B:2 ... J:10)
-         spend_cat3 = match(spend, LETTERS), 
          
          naw_cell_code = if_else(str_starts(cell_code, "CCSG"),
                                  gsub("CCSG", "DROP", cell_code),

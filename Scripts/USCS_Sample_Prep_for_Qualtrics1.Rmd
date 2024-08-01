@@ -269,7 +269,7 @@ if (nrow(USCS_Spend_dupes) > 0){
 ```{r}
  # Left join ensures only USCS_Base matters, If spend matters again, change to inner_join
 USCS_Sample <- left_join(USCS_Base, USCS_Spend, by = "gmpi_base_cust_id") %>%
-  mutate(
+  mutate(raw_setup_dt = setup_dt,
           setup_dt = if_else(setup_dt == "0001-01-01",
                        NA_character_, setup_dt),
           setup = as_date(setup_dt, format = "%Y-%m-%d"),
@@ -387,6 +387,25 @@ save(USCS_Sample, file="../Data/USCS_Sample_Preremovals.Rdata")
 # load("../Data/USCS_Sample_Preremovals.Rdata")
 ```
 
+### Invalid Setup Date Check
+
+```{r}
+to_remove_setup_dt <- USCS_Sample %>% 
+  filter(is.na(setup_dt)) %>% 
+  select(gmpi_base_cust_id, marketer_code, naw_cell_code, raw_age, raw_setup_dt, card_anniv_dt)
+
+if (nrow(to_remove_setup_dt) > 0){
+  warning(f_str('There were {nrow(to_remove_setup_dt)} people who had a missing setup date or setup date of 01-01-0001'))
+  warning("Verify with the PM if they are okay with these being removed in the email at the end of this script")
+  
+  # Save the removals to the output workbook
+  addWorksheet(Diagnostic_WB, "Removed_Setup_DT")
+  writeData(Diagnostic_WB, "Removed_Setup_DT", to_remove_setup_dt) 
+} else {
+  message("SUCCESS: No Observations with invalid Setup Dates")
+}
+
+```
 
 ### Age Check
 
@@ -398,16 +417,16 @@ save(USCS_Sample, file="../Data/USCS_Sample_Preremovals.Rdata")
       - Note this sheet will be empty if there are no observations removed
 
 ```{r}
-wrong_yob <- USCS_Sample %>% filter(!is.na(raw_age) & (raw_age > 120 & raw_age < 2000)) %>% 
+to_remove_yob <- USCS_Sample %>% filter(!is.na(raw_age) & (raw_age > 120 & raw_age < 2000)) %>% 
   select(gmpi_base_cust_id, marketer_code, naw_cell_code, raw_age, setup_dt, card_anniv_dt)
 
-if (nrow(wrong_yob) > 0){
-  warning(f_str('There were {nrow(wrong_yob)} people who are too old(>120) | '))
+if (nrow(to_remove_yob) > 0){
+  warning(f_str('There were {nrow(to_remove_yob)} people who are too old (>120) or having missing age '))
   warning("Verify with the PM if they are okay with these being removed in the email at the end of this script")
   
   # Save the removals to the output workbook
   addWorksheet(Diagnostic_WB, "Removed_YOB")
-  writeData(Diagnostic_WB, "Removed_YOB", wrong_yob) 
+  writeData(Diagnostic_WB, "Removed_YOB", to_remove_yob) 
 }
 ```
 
@@ -702,7 +721,7 @@ exp_cell_codes <- read_excel(SAMPLE_PREP_PATH,
 ```
 
 ```{r}
-tenure_spend_check <- USCS_Augment %>% 
+to_remove_tenure_spend <- USCS_Augment %>% 
   dplyr::select(gmpi_base_cust_id, naw_cell_code, tenure_var, 
                       account_spend, marketer_code, setup_dt) %>%  
   inner_join(exp_cell_codes, by="naw_cell_code")  %>% 
@@ -712,15 +731,15 @@ tenure_spend_check <- USCS_Augment %>%
   filter(flag_spend | flag_tenure)
 
 
-if (nrow(tenure_spend_check) > 0){
-  warning(f_str("There are {nrow(tenure_spend_check)} people flagged for deletion in the augment file due to bad account spends or tenures. These will be found in the `Files_to_send/USCS_Diagnostics_MONTH_YEAR.xlsx` file. Verify with the PM if they are okay with these being removed in the email at the end of this script"))
+if (nrow(to_remove_tenure_spend) > 0){
+  warning(f_str("There are {nrow(to_remove_tenure_spend)} people flagged for deletion in the augment file due to bad account spends or tenures. These will be found in the `Files_to_send/USCS_Diagnostics_MONTH_YEAR.xlsx` file. Verify with the PM if they are okay with these being removed in the email at the end of this script"))
 
 } else{
   message("SUCCESS: NO people deleted due to bad account spends or tenure in the augment file")
 }
  
 addWorksheet(Diagnostic_WB, "Removed_Tenure_or_Spend")
-writeData(Diagnostic_WB, "Removed_Tenure_or_Spend", tenure_spend_check) 
+writeData(Diagnostic_WB, "Removed_Tenure_or_Spend", to_remove_tenure_spend) 
 saveWorkbook(Diagnostic_WB, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_{YEAR}.xlsx"), overwrite = TRUE)
 ```
 
@@ -779,11 +798,11 @@ Beck
 
 ```{r}
 # Remove bad YOB
-USCS_Main <- USCS_Main %>% anti_join(wrong_yob, by = 'gmpi_base_cust_id') # Line to comment out if PM does not want these samples removed
-USCS_Augment <- USCS_Augment %>% anti_join(wrong_yob, by = 'gmpi_base_cust_id') # Line to comment out if PM does not want these samples removed
+USCS_Main <- USCS_Main %>% anti_join(to_remove_yob, by = 'gmpi_base_cust_id') # Line to comment out if PM does not want these samples removed
+USCS_Augment <- USCS_Augment %>% anti_join(to_remove_yob, by = 'gmpi_base_cust_id') # Line to comment out if PM does not want these samples removed
 
 # Removing Bad tenure and Spend
-USCS_Augment <- USCS_Augment %>% anti_join(tenure_spend_check, by = "gmpi_base_cust_id") # Comment this out if not removing
+USCS_Augment <- USCS_Augment %>% anti_join(to_remove_tenure_spend, by = "gmpi_base_cust_id") # Comment this out if not removing
 ```
 
 ```{r}

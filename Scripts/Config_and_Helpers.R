@@ -256,6 +256,18 @@ load_base <- function(){
     t() %>% as.data.frame() %>% mutate(V2 = as.numeric(V2)) %>% 
     set_names(c("col_names", "col_widths", "col_types"))
   
+  #### Verify file format is what we expect
+  total_length <- sum(df_info$col_widths)
+  
+  # Read in the third line of the file
+  # Skipping possible weird first 2 lines
+  third_line <- read_lines(BASE_PATH, skip = 2, n_max = 1)
+  
+  if (nchar(third_line) != total_length) {
+    stop(f_str("Input widths do not match expected column widths. Must fix. Expected width: {total_length} | Actual width: {nchar(third_line)}",
+               .envir = environment())) # Glue doesn't like local environment within functions, so we have to specify it.
+  }
+  
   # We use df_info to load in the file properly
   readr::read_fwf(file = BASE_PATH,
                   skip = 2, # If the raw file contains the funky lines on top, include a skip
@@ -319,6 +331,18 @@ load_spend <- function(){
                         c('All_ROCs',            4,'n')) %>% 
     t() %>% as.data.frame() %>% mutate(V2 = as.numeric(V2)) %>% 
     set_names(c("col_names", "col_widths", "col_types"))
+  
+  #### Verify file format is what we expect
+  total_length <- sum(df_info$col_widths)
+  
+  # Read in the third line of the file
+  # Skipping possible weird first 2 lines
+  third_line <- read_lines(SPEND_PATH, skip = 2, n_max = 1)
+  
+  if (nchar(third_line) != total_length) {
+    stop(f_str("Input widths do not match expected column widths. Must fix. Expected width: {total_length} | Actual width: {nchar(third_line)}",
+               .envir = environment())) # Glue doesn't like local environment within functions, so we have to specify it.
+  }
   
    # We use df_info to load in the file properly
    readr::read_fwf(file = SPEND_PATH,

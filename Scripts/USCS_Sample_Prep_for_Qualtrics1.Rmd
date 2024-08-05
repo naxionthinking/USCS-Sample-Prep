@@ -797,12 +797,44 @@ Beck
 
 
 ```{r}
+# Remove bad SetupDate
+removal_count_setup_dt_main <- USCS_Main %>% 
+  semi_join(to_remove_setup_dt, by = 'gmpi_base_cust_id') %>% 
+  nrow()
+
+removal_count_setup_dt_augment <- USCS_Augment %>% 
+  semi_join(to_remove_setup_dt, by = 'gmpi_base_cust_id') %>% 
+  nrow()
+
+USCS_Main <- USCS_Main %>% anti_join(to_remove_setup_dt, by = 'gmpi_base_cust_id') # Line to comment out if PM does not want these samples removed
+USCS_Augment <- USCS_Augment %>% anti_join(to_remove_setup_dt, by = 'gmpi_base_cust_id') # Line to comment out if PM does not want these samples removed
+
 # Remove bad YOB
+removal_count_yob_main <- USCS_Main %>% 
+  semi_join(to_remove_yob, by = 'gmpi_base_cust_id') %>% 
+  nrow()
+
+removal_count_yob_augment <- USCS_Augment %>% 
+  semi_join(to_remove_yob, by = 'gmpi_base_cust_id') %>% 
+  nrow()
+
 USCS_Main <- USCS_Main %>% anti_join(to_remove_yob, by = 'gmpi_base_cust_id') # Line to comment out if PM does not want these samples removed
 USCS_Augment <- USCS_Augment %>% anti_join(to_remove_yob, by = 'gmpi_base_cust_id') # Line to comment out if PM does not want these samples removed
 
 # Removing Bad tenure and Spend
+removal_count_tenure_spend <- USCS_Augment %>% 
+  semi_join(to_remove_tenure_spend, by = "gmpi_base_cust_id") %>% 
+  nrow()
+
 USCS_Augment <- USCS_Augment %>% anti_join(to_remove_tenure_spend, by = "gmpi_base_cust_id") # Comment this out if not removing
+
+# Print removal counts
+cat("Number of removals due to bad SetupDate in USCS_Main:", removal_count_setup_dt_main, "\n")
+cat("Number of removals due to bad SetupDate in USCS_Augment:", removal_count_setup_dt_augment, "\n")
+cat("Number of removals due to bad YOB in USCS_Main:", removal_count_yob_main, "\n")
+cat("Number of removals due to bad YOB in USCS_Augment:", removal_count_yob_augment, "\n")
+cat("Number of removals due to bad tenure and spend in USCS_Augment:", removal_count_tenure_spend, "\n")
+
 ```
 
 ```{r}

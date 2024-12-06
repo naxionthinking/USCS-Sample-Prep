@@ -408,8 +408,11 @@ USCS_Sample <- USCS_Sample %>% left_join_suppress(mutate(open_seg, is_main = F))
 ## Performing Removals
 
 ```{r Store Pre Removals}
-# We save a copy of the dataset here before the removals, so it's easy to not remove something if asked.
-save(USCS_Sample, file="../Data/USCS_Sample_Preremovals-{Sys.Date()}.Rdata")
+# We save a copy of the dataset and helper files here before the removals, so it's easy to not remove something if asked.
+save(USCS_Sample, 
+     to_remove_miss_spend, to_remove_miss_tenure, to_remove_miss_setup_dt, to_remove_tenure, to_remove_spend, to_remove_yob, 
+     Diagnostic_WB, MONTH, YEAR,
+     file="../Data/USCS_Sample_Preremovals-{Sys.Date()}.Rdata")
 
 # Uncomment this to load in the image of the USCS_Sample dataframe before removals
 # REMOVAL_DATE <- "2024-12-03
@@ -422,22 +425,17 @@ save(USCS_Sample, file="../Data/USCS_Sample_Preremovals-{Sys.Date()}.Rdata")
 ```{r Perform Removals}
 USCS_Sample <- USCS_Sample %>% 
   remove_bad_sample(to_remove_miss_spend, "Missing Spend") %>% 
-  remove_bad_sample(to_remove_miss_spend, "Missing Tenure") %>% 
+  remove_bad_sample(to_remove_miss_tenure, "Missing Tenure") %>% 
   remove_bad_sample(to_remove_miss_setup_dt, "Invalid Setup Date") %>% 
   remove_bad_sample(to_remove_tenure, "Invalid Tenure") %>% 
   remove_bad_sample(to_remove_spend, "Invalid Spend") %>% 
   remove_bad_sample(to_remove_yob, "Invalid YOB") 
 ```
 
-## Save Intermediate Data and Clear Workspace
+## Save Workbook and Clear Workspace
 ```{r Save Workbook}
 # Save the Diagnostic Workbook
 saveWorkbook(Diagnostic_WB, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_{YEAR}-{Sys.Date()}.xlsx"), overwrite = TRUE)
-```
-
-```{r Save Post-Removals}
-# Store sample dataset after removals
-# save(USCS_Sample, file=f_str("../Data/USCS_unweighted_sample_{MONTH}_{YEAR}-{Sys.Date()}.Rdata"))
 ```
 
 ```{r Clean up Workspace message=FALSE}
@@ -819,7 +817,7 @@ USCS_Final %>% write_csv("../Files_to_send/AmexGABMUSCSSurvey_{YEAR}{MONTH_2_DIG
 
 ```{r Save}
 # Store final dataset for ease of loading in formats
-# save(USCS_Final, file=f_str("../Data/USCS_final_{MONTH}_{YEAR}.Rdata"))
+# save(USCS_Final, file=f_str("../Data/USCS_Final_{MONTH}_{YEAR}-{Sys.Date()}.Rdata"))
 ```
 
 ```{r Clean up Workspace}
@@ -828,6 +826,7 @@ rm.all.but(keep=c('USCS_Final', 'MONTH', 'YEAR'))
 
 ```{r Reload in Final Dataset}
 # Load final dataset for quick checks if needed
-# load(f_str("../Data/USCS_final_{MONTH}_{YEAR}.Rdata"))
+# FINAL_SAVE_DATE <- "2024-12-03"
+# load(f_str("../Data/USCS_Final_{MONTH}_{YEAR}-{FINAL_SAVE_DATE}.Rdata"))
 ```
 

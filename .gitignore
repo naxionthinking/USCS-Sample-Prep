@@ -5,4 +5,4 @@
 *.csv
 *.xlsx
 *.Rdata
-!Sample_Prep_Helper_Template.xlsx
+!USCS_Sample_Prep_Helper_Template.xlsx

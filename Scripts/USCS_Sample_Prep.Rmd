@@ -113,7 +113,7 @@ add_and_write_sheet(Diagnostic_WB, "Main_Marketer_Code_Freqs", main_marketer_cod
 req_marketer_codes <- load_req_marketer_codes()
 
 # Check Counts
-main_marketer_codes_check <- main_sp_codes %>% 
+main_marketer_codes_check <- main_marketer_codes %>% 
   left_join_suppress(req_marketer_codes) %>% select(marketer_code, count_received = Freq, count_requested) %>% 
   filter((count_received - count_requested) != 0)
 
@@ -132,7 +132,7 @@ augment_specs <- load_augment_specs()
 
 # Check counts
 augment_cc_check <- USCS_Sample %>% filter(!is_main) %>% 
-  group_by(cell_code) %>% summarize(count_received = n()) %>% 
+  count(cell_code, name = "count_received") %>% 
   left_join_suppress(augment_specs) %>% 
   filter((count_received - count_requested) != 0)
 
@@ -151,8 +151,7 @@ log_check_result(
  # Add some helper variables -- most are not included in the output
 USCS_Sample <- USCS_Sample %>%
   mutate(raw_setup_dt = setup_dt,
-         setup_dt = if_else(setup_dt == "0001-01-01",
-                       NA_character_, setup_dt),
+         setup_dt = na_if(setup_dt,  "0001-01-01"),
          setup = as_date(setup_dt, format = "%Y-%m-%d"),
          
          # Official tenure in months
@@ -217,8 +216,7 @@ valid_dmas <- load_valid_dmas()
 
 # identify invalid dma's if any and get frequencies
 invalid_dmas <- USCS_Sample %>% 
- filter(!best_dma_cd %in% valid_dmas) %>% 
- group_by(best_dma_cd) %>% summarize(count = n())
+ filter(!best_dma_cd %in% valid_dmas) %>% count(best_dma_cd)
 
 # DMA check
 log_section_start("DMA Code")
@@ -227,7 +225,7 @@ log_check_result(
   type = "DMA codes",
   check_type = "validity",
   data = invalid_dmas,
-  row_message = "DMA Code {row$best_dma_cd}: {row$count} occurrences"
+  row_message = "DMA Code {row$best_dma_cd}: {row$n} occurrences"
 )
 ```
 
@@ -269,12 +267,12 @@ if(nrow(to_remove_miss_tenure) > 0) add_and_write_sheet(Diagnostic_WB, "Removed_
 
 # INVALID TENURE AND SPEND
 to_remove_tenure_spend_helper <- USCS_Sample %>% filter(!is_main) %>% 
-  select(gmpi_base_cust_id, cell_code, tenure_var, 
+  select(gmpi_base_cust_id, cell_code, tenure_var, tenure_days,
                       account_spend, marketer_code, setup_dt) %>%  
   inner_join(augment_specs, by="cell_code")  %>% 
-  mutate(tenure_var_max = if_else(is.na(tenure_var_max), Inf, tenure_var_max),
-         flag_tenure = tenure_var < tenure_var_min | tenure_var > tenure_var_max,
-         flag_spend = (account_spend <= 0 & min_spend == ">$0"))
+  mutate(tenure_days_max = replace_na(tenure_days_max, Inf),
+         flag_tenure = tenure_days < tenure_days_min | tenure_days > tenure_days_max,
+         flag_spend = (account_spend <= 0 & min_spend == ">$0")) 
 
 ## INVALID TENURE
 to_remove_tenure <- to_remove_tenure_spend_helper %>% filter(flag_tenure) %>% select(-starts_with("flag"))
@@ -380,7 +378,7 @@ negative_spend_validation_results <- USCS_Sample %>% filter(is_main) %>% check_n
 open_seg <- load_open_seg()
 ```
 
-```{r Open Seg Dupes}
+```{r Open Seg Checks}
 open_seg_dupes <- open_seg[duplicated(open_seg$customer_id),]
 
 log_section_start("Open Segment Duplicate ID Check")
@@ -391,12 +389,10 @@ log_check_result(
   data = open_seg_dupes$customer_id
 )
 
-open_seg_freq <- open_seg %>% freq_table("OPEN_MANAGED_SEGMENT", caption="Open Managed Segment Freqs")
-```
-
-```{r Open Seg Overlaps}
 # Check overlap between the open segment and the sample
 open_segment_checks <- check_open_seg_overlap(USCS_Sample, open_seg)
+
+open_seg_freq <- open_seg %>% freq_table("OPEN_MANAGED_SEGMENT", caption="Open Managed Segment Freqs")
 ```
 
 ```{r Append Open Seg}
@@ -441,7 +437,7 @@ saveWorkbook(Diagnostic_WB, file = f_str("../Files_to_send/USCS_Diagnostics_{MON
 ```{r Clean up Workspace message=FALSE}
 # Clean up the environment
 rm.all.but(keep = c('USCS_Sample'))
-source('Config_and_Helpers.R')
+source('USCS_Helper_Functions.R')
 ```
 
 ## Assign weighting conditions

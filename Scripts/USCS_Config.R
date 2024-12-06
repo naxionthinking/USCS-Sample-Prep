@@ -69,7 +69,7 @@ if (length(.spend_file) == 0) stop("Spend file not found")
 MAIN_CELL_CODES <- c("CCSG01", "CCSG02", "CCSG03")
 
 # Marketer codes with allowed negative spend
-MARKETER_CODES_NO_NEGATIVES <- c("SP111", "SP112", "SP113", "SP114", "SP115", 
+.MARKETER_CODES_NO_NEGATIVES <- c("SP111", "SP112", "SP113", "SP114", "SP115", 
                           "SP117", "SP118", "SP123", "SP127", "SP132", 
                           "SP136", "SP145", "SP153", "SP156")
 

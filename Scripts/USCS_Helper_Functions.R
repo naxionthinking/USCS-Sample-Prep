@@ -260,8 +260,9 @@ load_spend <- function(){
 
 load_req_marketer_codes <- function(){
   read_excel(.SAMPLE_PREP_PATH, sheet = "Sp_Code_Freqs") %>% 
+    set_names(c("sp_code", "card_name", "count_requested")) %>% 
     drop_na(sp_code) %>% # Remove blank spaces if they were kept in
-    mutate(sp_code = glue("SP{sp_code}")) %>% 
+    mutate(marketer_code = glue("SP{sp_code}")) %>% 
     # If blank spaces were loaded in, the columns might be characters when we want them to be numbers, this will fix that
     suppressMessages(type_convert())
 }
@@ -455,7 +456,7 @@ assign_weight_conditions <- function(weight_conditions){
     # 
     select(weighting_segment, 
            sp_code, 
-           cell_code_cond, 
+           cell_code, 
            tenure, spend, 
            full_cond)
 }
@@ -548,7 +549,7 @@ log_check_result <- function(condition, type, check_type = "validation", data = 
 }
 
 # Check for negative spend codes
-check_negative_marketer_codes <- function(df, sp_code_no_negatives=SP_CODES_NO_NEGATIVES){
+check_negative_marketer_codes <- function(df, sp_code_no_negatives=.MARKETER_CODES_NO_NEGATIVES){
   log_section_start("Checking Negative and Zero Spends in Main Marketer Codes") 
   
   # Analyze spend patterns

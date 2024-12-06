@@ -16,17 +16,7 @@ Here's an overview of git and some basic git commands: [Data Camp git cheat shee
     <center><img src="./Readme_Icons/Command_Prompt.png"/></center>
 
 
-2.  Navigate to the directory where you want to store the cloned repository.
-    - If it's February 2023, then you'd run the following in the command prompt. "cd" means change directory, so you just specify the path of the folder you want to hold the USCS Sample prep information.
-```
-cd \\sys_op\methods\Amex.549\Sample\<YEAR>\<YEAR>-<MONTH_NO>\
-```
-For example, for February 2023, you would run
-
-```
-cd \\sys_op\methods\Amex.549\Sample\2023\2023-02\
-```
-Now you are "inside" this folder. **Note**: You can also navigate to the folder in File Explorer, right click once you're inside, and click on "Open in Terminal"
+2.  Navigate to the directory where you want to store the cloned repository in File Explorer, e.g., `\\sys_op\methods\Amex.549\Sample\2024\2024-10\`. Once in the folder, right click on open space in the folder, and click on "Open in Terminal".
 
 3.  Run the following command to clone the `main` branch:
     - This will create a clone of the template repository in the directory you specified above
@@ -83,17 +73,17 @@ The `USCS_Sample_Prep_Helper_MONTH_YEAR.xlsx` contains 4 sheets :
 
 1.  *Augment_Specs*
 
-This sheet rarely changes. The information comes from the *Segmentation Criteria* sheet of the `MONTH_YEAR_MainFileBuildAugments_NA.xlsx` file which can be found in the `requests` folder of the job drive for the current month. Make sure the tenure is reported in this sheet in months and not days. **NOTE THAT THE SEGMENTATION CRITERIA SHEET IS INCORRECT FOR CELL14, AND IT SHOULD BE "Any Spend" BECAUSE IT IS A PAYING CARD.**
+This sheet rarely changes. The information comes from the *Segmentation Criteria* sheet of the `MONTH_YEAR_MainFileBuildAugments_NA.xlsx` file which can be found in the `requests` folder of the job drive for the current month. As of January 2025, we are now using tenure in days rather in months and comparing against the date we recieved the sample--which is likely the day the sample was pulled. **NOTE THAT THE SEGMENTATION CRITERIA SHEET IS INCORRECT FOR CELL14, AND IT SHOULD BE "Any Spend" BECAUSE IT IS A PAYING CARD.**
 
 <center>
 
-| CELL_CODE | tenure_var_min | tenure_var_max | min_spend |
-|:---------:|:--------------:|:--------------:|:---------:|
-|   CNCE14  |       5        |                | Any Spend |
-|   CNPL18  |       2        |       15       | Any Spend |
-|   CNHH21  |       3        |       15       |   \>$0    |
-|   CNDP22  |       2        |       15       | Any Spend |
-|   CNPR35  |       2        |       4        | Any Spend |
+| CELL_CODE | tenure_days_min | tenure_days_max | min_spend |
+|:---------:|:---------------:|:---------------:|:---------:|
+|   CNCE14  |      120        |                 | Any Spend |
+|   CNPL18  |       45        |       450       | Any Spend |
+|   CNHH21  |       45        |       450       |   \>$0    |
+|   CNDP22  |       45        |       450       | Any Spend |
+|   CNPR35  |       45        |       450       | Any Spend |
 
 </center>
 

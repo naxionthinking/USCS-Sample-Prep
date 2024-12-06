@@ -408,7 +408,7 @@ USCS_Sample <- USCS_Sample %>% left_join_suppress(mutate(open_seg, is_main = F))
 save(USCS_Sample, 
      to_remove_miss_spend, to_remove_miss_tenure, to_remove_miss_setup_dt, to_remove_tenure, to_remove_spend, to_remove_yob, 
      Diagnostic_WB, MONTH, YEAR,
-     file="../Data/USCS_Sample_Preremovals-{Sys.Date()}.Rdata")
+     file=f_str("../Data/USCS_Sample_Preremovals-{Sys.Date()}.Rdata"))
 
 # Uncomment this to load in the image of the USCS_Sample dataframe before removals
 # REMOVAL_DATE <- "2024-12-03

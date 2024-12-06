@@ -1,0 +1,833 @@
+---
+title: "USCS Prep Sample"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  markdown:
+    wrap: 75
+---
+
+## Preparatory Steps
+
+Consult `ReadMe.md` for instructions on how to configure the inputs
+properly before running this script
+
+Remember to update file paths and variables in `USCS_Config.R`
+
+ **This code will output warnings and messages.** The warnings indicate
+    a check is not met. These will be printouts with "Warning:" before
+    them. If a check is passed, a message will be printed with a green "✔"
+    before it. If any warnings are printed, figure out why and report if
+    the warning says to. Many warning will just be for typical removals
+
+## Dependencies
+
+```{r Load in Packages, message=FALSE, warning=FALSE}
+if (!require("pacman")) install.packages("pacman")
+
+# Loads in necessary packages, and installs them if you don't have them installed
+pacman::p_load("tidyverse",
+               "stringi",
+               "varhandle",
+               "openxlsx",
+               "cli",
+               "janitor",
+               "lubridate",
+               "crfsuite")
+
+# Load in configuration file variables and functions
+source('USCS_Helper_Functions.R') 
+
+options(scipen = 99999, # Remove scientific notation
+        dplyr.summarise.inform = FALSE) # Remove summarize messages
+
+knitr::opts_chunk$set(results = "asis", # Prints html tables nicely
+                      echo=TRUE) # Show all code chunks in the output
+
+# Initialize Diagnostic Workbook
+Diagnostic_WB <- createWorkbook()
+```
+
+## Data Loading
+
+- As of June 2023, we are ignoring the data that comes in from the Spend file as we do not include any of its variables in the final sample
+- So disregard any anomalies with the spend dataframe
+- The code may be removed for loading spend in the future
+
+```{r Load in base and spend dataframes}
+USCS_Base <- load_base() 
+# USCS_Spend <- load_spend()
+```
+
+```{r Join Data}
+# USCS_Sample <- inner_join(USCS_Base, USCS_Spend, by = "gmpi_base_cust_id") %>% mutate(is_main = cell_code %in% MAIN_CELL_CODES)
+# 
+# if (nrow(USCS_Sample) != nrow(USCS_Base)){
+#   cli_abort("The BASE and SPEND datasets do not line up. Something is wrong. Ask PM if we can ignore the Spend dataset--as no variables are used from it anyway.")
+# } else{
+#   cli_alert_success("BASE and SPEND datasets line up.")
+# }
+
+# If ignoring SPEND, just uncomment this line instead.
+USCS_Sample <- USCS_Base %>% mutate(is_main = cell_code %in% MAIN_CELL_CODES)
+```
+
+```{r Missing Value Summary}
+# Variables to summarize number of missing values
+# This is mostly just for logging what's happened
+# just make sure no variables have a large number of missing values, in my (Beck's) 2 years, I haven't seen anything with more than 0.05% missing
+miss_vars <- c("first_nm", 'last_nm',
+               "raw_fico", "fico_range",
+               "raw_age",
+               "share_of_wallet_amex", "size_of_wallet",
+               "customer_spend", "account_spend")
+
+missing_vals <- USCS_Sample %>% count_missing(miss_vars)
+```
+
+## Checking Expected Counts
+
+-   Compare sample requested vs count received
+-   To check the counts of the main sample, we check it against the counts for the main marketer codes
+-   To check the counts of the augment, we use the `Augment_Specs` sheet
+
+```{r Check Cell Codes}
+# Create a frequency table of each cell code
+cell_code_freq <- USCS_Sample %>% freq_table("cell_code")  %>% 
+  select(cell_code, Freq) %>% arrange(parse_number(cell_code)) %>% 
+  make_nice_table(caption = "Cell Code Frequencies")
+
+# Save to output excel file to be sent to PM
+add_and_write_sheet(Diagnostic_WB, "Cell_Code_Freqs", cell_code_freq)
+
+main_marketer_codes <- USCS_Sample %>% filter(is_main) %>% freq_table("marketer_code", caption = "Marketer Code Frequencies for Main Cell Codes")
+
+# Write to excel to send to OPS Manager
+add_and_write_sheet(Diagnostic_WB, "Main_Marketer_Code_Freqs", main_marketer_codes)
+```
+
+
+```{r Main Cell Code Counts Check}
+# Load in expected marketer code counts
+req_marketer_codes <- load_req_marketer_codes()
+
+# Check Counts
+main_marketer_codes_check <- main_sp_codes %>% 
+  left_join_suppress(req_marketer_codes) %>% select(marketer_code, count_received = Freq, count_requested) %>% 
+  filter((count_received - count_requested) != 0)
+
+log_section_start("Main Sample Marketer Code")
+log_check_result(
+  condition = nrow(main_marketer_codes_check) == 0,
+  type = "marketer codes",
+  check_type = "counts",
+  data = main_marketer_codes_check,
+  row_message = "{row$marketer_code}: Expected {comma(row$count_requested)} | Received {comma(row$count_received)}"
+)
+```
+
+```{r Augment Cell Code Counts Check}
+augment_specs <- load_augment_specs()
+
+# Check counts
+augment_cc_check <- USCS_Sample %>% filter(!is_main) %>% 
+  group_by(cell_code) %>% summarize(count_received = n()) %>% 
+  left_join_suppress(augment_specs) %>% 
+  filter((count_received - count_requested) != 0)
+
+
+log_section_start("Augment Cell Code Count Check")
+log_check_result(
+  condition = nrow(augment_cc_check) == 0,
+  type = "cell codes",
+  check_type = "counts",
+  data = augment_cc_check,
+  row_message = "{row$cell_code}: Expected {comma(row$count_requested)} | Received {comma(row$count_received)}"
+)
+```
+
+```{r Add Helper Variables}
+ # Add some helper variables -- most are not included in the output
+USCS_Sample <- USCS_Sample %>%
+  mutate(raw_setup_dt = setup_dt,
+         setup_dt = if_else(setup_dt == "0001-01-01",
+                       NA_character_, setup_dt),
+         setup = as_date(setup_dt, format = "%Y-%m-%d"),
+         
+         # Official tenure in months
+         tenure_var = 12 * (YEAR - 1 - year(setup)) + (MONTH_NO + 12 - month(setup)),
+         
+         # Tenure in days used for validation
+         tenure_days = as.numeric(DATE_SAMPLE_RECIEVED - setup),
+         
+         customer_id = as.numeric(gmpi_base_cust_id),
+         
+         sp_code = parse_number(marketer_code)
+         ) %>% 
+         
+         # perform ab split (if desired)
+         # makes new variables based on split
+         # The create_ab_split function will create the "selected" variable. So if you are performing the ab_split, remove the line that defaults the selected variable to 0.
+  
+  #create_ab_split(strat_var = 'marketer_code', sample_size = 0.5) %>% # Stratify sample 50% of obs for each marketer code
+  mutate(selected = 0) %>%   # Or use create_ab_split() if needed
+  mutate(
+         mv_nps_ind = if_else(selected == 0, "NPS", "MV"),
+         subject_line = if_else(selected == 0, 6, 7),
+         
+         mr_in_n = if_else(mr_in == 'Y', 1, 2)
+         )
+```
+
+## Checking for Duplicate Keys
+
+```{r Dupe Check}
+# Identify duplicates for customer id and username/password
+cust_id_dupes <- USCS_Sample[duplicated(USCS_Sample$gmpi_base_cust_id),]
+pers_dupes <- USCS_Sample[duplicated(USCS_Sample[,c("personalization1", "personalization2")]),]
+
+# Customer ID duplicates check
+log_section_start("Customer ID")
+log_check_result(
+  condition = nrow(cust_id_dupes) == 0,
+  type = "customer ID",
+  check_type = "dupes",
+  data = cust_id_dupes$gmpi_base_cust_id
+)
+
+# Username/password duplicates check
+log_section_start("Username/Password")
+log_check_result(
+  condition = nrow(pers_dupes) == 0,
+  type = "username/password",
+  check_type = "dupes",
+  data = pers_dupes,
+  row_message = "Username: {row$personalization1}, Password: {row$personalization2}"
+)
+```
+
+## DMA Frequency
+
+-   Make sure all DMA Codes are valid using the `DMA_Checks` sheet.
+
+```{r DMA Check}
+# Load in valid dmas
+valid_dmas <- load_valid_dmas()
+
+# identify invalid dma's if any and get frequencies
+invalid_dmas <- USCS_Sample %>% 
+ filter(!best_dma_cd %in% valid_dmas) %>% 
+ group_by(best_dma_cd) %>% summarize(count = n())
+
+# DMA check
+log_section_start("DMA Code")
+log_check_result(
+  condition = nrow(invalid_dmas) == 0,
+  type = "DMA codes",
+  check_type = "validity",
+  data = invalid_dmas,
+  row_message = "DMA Code {row$best_dma_cd}: {row$count} occurrences"
+)
+```
+
+## Check Validity of Certain Variables for Removal
+  - Account Spend
+  - Tenure
+  - Setup Date
+  - Marketer Code
+  - ' ' at start of Customer ID
+  - Year of Birth:  Make sure no one is less than 18 or older than 120
+  
+
+```{r Variable Validity Checks}
+cli_h1("Variable Validity Checks")
+cli_alert_warning("Records with invalid values will be removed at the end of this script")
+
+# MISSING SPEND
+to_remove_miss_spend <- USCS_Sample[USCS_Sample$account_spend == "" | is.na(USCS_Sample$account_spend),]
+log_check_result(
+  condition = nrow(to_remove_miss_spend) == 0,
+  type = "account spend",
+  check_type = "missing",
+  count = nrow(to_remove_miss_spend)
+)
+
+if(nrow(to_remove_miss_spend) > 0) add_and_write_sheet(Diagnostic_WB, "Removed_Missing_Spend", to_remove_miss_spend)
+
+# MISSING TENURE
+to_remove_miss_tenure <- USCS_Sample[USCS_Sample$t_add == "" | is.na(USCS_Sample$t_add),]
+# Tenure check
+log_check_result(
+  condition = nrow(to_remove_miss_tenure) == 0,
+  type = "tenure",
+  check_type = "missing",
+  count = nrow(to_remove_miss_tenure)
+)
+
+if(nrow(to_remove_miss_tenure) > 0) add_and_write_sheet(Diagnostic_WB, "Removed_Missing_Tenure", to_remove_miss_tenure)
+
+# INVALID TENURE AND SPEND
+to_remove_tenure_spend_helper <- USCS_Sample %>% filter(!is_main) %>% 
+  select(gmpi_base_cust_id, cell_code, tenure_var, 
+                      account_spend, marketer_code, setup_dt) %>%  
+  inner_join(augment_specs, by="cell_code")  %>% 
+  mutate(tenure_var_max = if_else(is.na(tenure_var_max), Inf, tenure_var_max),
+         flag_tenure = tenure_var < tenure_var_min | tenure_var > tenure_var_max,
+         flag_spend = (account_spend <= 0 & min_spend == ">$0"))
+
+## INVALID TENURE
+to_remove_tenure <- to_remove_tenure_spend_helper %>% filter(flag_tenure) %>% select(-starts_with("flag"))
+log_check_result(
+  condition = nrow(to_remove_tenure) == 0,
+  type = "augment tenure",
+  check_type = "validity",
+  count = nrow(to_remove_tenure)
+)
+if(nrow(to_remove_tenure) > 0) add_and_write_sheet(Diagnostic_WB, "Removed_Invalid_Tenure", to_remove_tenure)
+
+## INVALID SPEND
+to_remove_spend <- to_remove_tenure_spend_helper %>% filter(flag_spend) %>%  select(-starts_with("flag"))
+log_check_result(
+  condition = nrow(to_remove_spend) == 0,
+  type = "augment spend",
+  check_type = "validity",
+  count = nrow(to_remove_spend)
+)
+if(nrow(to_remove_spend) > 0) add_and_write_sheet(Diagnostic_WB, "Removed_Invalid_Spend", to_remove_spend)
+
+# INVALID SETUP DATE
+to_remove_miss_setup_dt <- USCS_Sample[USCS_Sample$setup_dt %in% c("", "0001-01-01") | is.na(USCS_Sample$setup_dt),]
+log_check_result(
+  condition = nrow(to_remove_miss_setup_dt) == 0,
+  type = "setup dates",
+  check_type = "validity",
+  count = nrow(to_remove_miss_setup_dt)
+)
+
+if(nrow(to_remove_miss_setup_dt) > 0) {
+  to_remove_miss_setup_dt %>% 
+    select(gmpi_base_cust_id, marketer_code, cell_code, raw_age, setup_dt, card_anniv_dt) %>%
+    add_and_write_sheet(Diagnostic_WB, "Removed_Missing_Setup", .)
+}
+
+# MISSING MARKETER CODE
+to_remove_miss_sp_code <- USCS_Sample[USCS_Sample$marketer_code == "" | is.na(USCS_Sample$marketer_code),]
+log_check_result(
+  condition = nrow(to_remove_miss_sp_code) == 0,
+  type = "marketer codes",
+  check_type = "missing",
+  count = nrow(to_remove_miss_sp_code)
+)
+
+if(nrow(to_remove_miss_sp_code) > 0) add_and_write_sheet(Diagnostic_WB, "Removed_Missing_Marketer_Code", to_remove_miss_sp_code)
+
+# LEADING SPACE IN ID
+to_remove_blank_id <- USCS_Sample %>% filter(substring(gmpi_base_cust_id, 1, 1) == " ") 
+log_check_result(
+  condition = nrow(to_remove_blank_id) == 0,
+  type = "customer IDs with leading spaces",
+  check_type = "validity",
+  count = nrow(to_remove_blank_id)
+)
+
+if(nrow(to_remove_blank_id) > 0) add_and_write_sheet(Diagnostic_WB, "Removed_Blank_ID", to_remove_blank_id)
+
+# YOB
+to_remove_yob <- USCS_Sample[is.na(USCS_Sample$raw_age) | between(USCS_Sample$raw_age, 120, 2000), ]
+log_check_result(
+  condition = nrow(to_remove_yob) == 0,
+  type = "ages",
+  check_type = "validity",
+  count = nrow(to_remove_yob)
+)
+
+if(nrow(to_remove_yob) > 0) {
+  to_remove_yob %>% 
+    select(gmpi_base_cust_id, marketer_code, cell_code, raw_age, setup_dt, card_anniv_dt) %>%
+    add_and_write_sheet(Diagnostic_WB, "Removed_YOB", .)
+}
+```
+
+
+## Marketer Code Spend Checking
+  - Is there anyone with spend <= 0 that shouldn’t be?
+  - Are there products that can have spend <= 0 that have no observations with spend <= 0?
+
+```{r Negative Spend Check}
+# Perform the check (allowed negative spend marketer codes defined in config file)
+negative_spend_validation_results <- USCS_Sample %>% filter(is_main) %>% check_negative_marketer_codes()
+```
+
+-- This is an example note from June 2023 of when Marketer Code 154 with allowed negative spend did not have any
+
+```{r UC File Message}
+# sp154 <- USCS_Sample %>% filter(is_main) %>% filter(marketer_code == 'SP154')
+# 
+#cli_alert_info('There were {nrow(sp154)} samples pulled for Marketer Code 154. The UC file for Q2 2023 shows that the post suppression count percentage is 0.1% for 0 spend. Given the small sample pulled for SP154 and the 0.1% likelihood that the sample is 0 spend, having no 0 spend in our sample is okay.')
+# 
+# sp154 %>% select(account_spend) %>% summary()
+```
+
+## New Open Segment
+
+-   New Open Segment file received every May/June
+-   The code reads in a list customer_ids classified segments.
+-   There should be less than 3000 people overlapping with the sample and the open segment
+
+```{r Load Open Seg message=FALSE}
+# Load in new segment data
+open_seg <- load_open_seg()
+```
+
+```{r Open Seg Dupes}
+open_seg_dupes <- open_seg[duplicated(open_seg$customer_id),]
+
+log_section_start("Open Segment Duplicate ID Check")
+log_check_result(
+  condition = nrow(open_seg_dupes) == 0,
+  type = "open segment customer IDs",
+  check_type = "dupes",
+  data = open_seg_dupes$customer_id
+)
+
+open_seg_freq <- open_seg %>% freq_table("OPEN_MANAGED_SEGMENT", caption="Open Managed Segment Freqs")
+```
+
+```{r Open Seg Overlaps}
+# Check overlap between the open segment and the sample
+open_segment_checks <- check_open_seg_overlap(USCS_Sample, open_seg)
+```
+
+```{r Append Open Seg}
+# Add the open segment info to the augment file
+USCS_Sample <- USCS_Sample %>% left_join_suppress(mutate(open_seg, is_main = F))
+```
+
+
+## Performing Removals
+
+```{r Store Pre Removals}
+# We save a copy of the dataset here before the removals, so it's easy to not remove something if asked.
+save(USCS_Sample, file="../Data/USCS_Sample_Preremovals-{Sys.Date()}.Rdata")
+
+# Uncomment this to load in the image of the USCS_Sample dataframe before removals
+# REMOVAL_DATE <- "2024-12-03
+# load(f_str("../Data/USCS_Sample_Preremovals-{REMOVAL_DATE}.Rdata"))
+```
+
+**IF OPS SAY YOU SHOULD NOT REMOVE CERTAIN PEOPLE**
+  - Comment out certain lines in the next chunk to not remove them
+
+```{r Perform Removals}
+USCS_Sample <- USCS_Sample %>% 
+  remove_bad_sample(to_remove_miss_spend, "Missing Spend") %>% 
+  remove_bad_sample(to_remove_miss_spend, "Missing Tenure") %>% 
+  remove_bad_sample(to_remove_miss_setup_dt, "Invalid Setup Date") %>% 
+  remove_bad_sample(to_remove_tenure, "Invalid Tenure") %>% 
+  remove_bad_sample(to_remove_spend, "Invalid Spend") %>% 
+  remove_bad_sample(to_remove_yob, "Invalid YOB") 
+```
+
+## Save Intermediate Data and Clear Workspace
+```{r Save Workbook}
+# Save the Diagnostic Workbook
+saveWorkbook(Diagnostic_WB, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_{YEAR}-{Sys.Date()}.xlsx"), overwrite = TRUE)
+```
+
+```{r Save Post-Removals}
+# Store sample dataset after removals
+# save(USCS_Sample, file=f_str("../Data/USCS_unweighted_sample_{MONTH}_{YEAR}-{Sys.Date()}.Rdata"))
+```
+
+```{r Clean up Workspace message=FALSE}
+# Clean up the environment
+rm.all.but(keep = c('USCS_Sample'))
+source('Config_and_Helpers.R')
+```
+
+## Assign weighting conditions
+
+- This chunk takes in the information from the target weight summary and extracts the conditions for the weighting segments
+  
+```{r Assign Weight Conditions}
+# Load in weighting conditions
+raw_weight_conditions <- load_weighting_conditions()
+
+weight_conditions <- assign_weight_conditions(raw_weight_conditions)
+
+#  Apply the weighting conditions and generate the segments
+USCS_Weighted <- USCS_Sample %>% 
+  mutate(weighting_segment = case_when(!!!rlang::parse_exprs(weight_conditions$full_cond)))
+```
+
+```{r Verify Weight Splits}
+# Summary Stats by weighted segment
+weight_summary <- create_weight_summary(USCS_Weighted) %>% make_nice_table("Weighting Segments Summary Table")
+
+# Cross-tabulation of cell_code, weighting_segment, and spcode
+weights_ncc_sp_code <- USCS_Weighted %>%
+  freq_table(c('cell_code', 'weighting_segment', 'sp_code'), "Cross-tab of cell_code, weighting_segment, and sp_code")
+
+# MAKE SURE ALL OBSERVATIONS HAVE A WEIGHTING SEGMENT | IF NOT, IDENTIFY WHAT HAPPENED IN JIM'S WEIGHTING FILE
+unweighted <- weight_summary %>% filter(is.na(weighting_segment))
+
+log_section_start("Weights")
+log_check_result(
+  condition = nrow(unweighted) == 0,
+  type = "Weights",
+  check_type = "missing",
+  data = unweighted$weighting_segment
+)
+```
+
+## Create New Variables
+
+```{r New Variables}
+USCS_New_Vars <- USCS_Weighted %>%
+  mutate(
+    # Setting Constants
+    survey_type = "USCS",
+    country = "United States",
+    country_code = 90,
+    language = "EN",
+    
+    sv_augment_cell = if_else(is_main, "NULL", str_extract(cell_code, "[0-9]{2}")), # NULL is default
+    cv_augment_sample = ifelse(!is_main, 1, 2),
+    
+    sv_spend = case_when(
+      is.na(account_spend) ~ 1L, # Since we set to missing spend to 0 later
+      account_spend <=    0 ~ 1L,
+      account_spend <  1500 ~ 2L,
+      account_spend <  2500 ~ 3L,
+      account_spend <  5000 ~ 4L,
+      account_spend <  7500 ~ 5L,
+      account_spend < 10000 ~ 6L,
+      account_spend < 20000 ~ 7L,
+      account_spend < 35000 ~ 8L,
+      account_spend < 50000 ~ 9L,
+      TRUE ~ 10L
+    ),
+    account_spend = coalesce(account_spend, 0), # Set missing spend to 0
+    bf_fico_range = ifelse(fico_range == "", "", parse_number(fico_range)),
+    account_share_of_wallet = ifelse(size_of_wallet != 0, account_spend / size_of_wallet, NA),  
+    
+    best_dma = ifelse(best_dma_cd %in% c(0, 999) | is.na(best_dma_cd), 
+                  "REF",
+                   as.character(best_dma_cd)),
+    
+    cv_interview_date = paste0(YEAR, MONTH_2_DIGITS),
+    wv_weighting_segment = paste0(weighting_segment, cv_interview_date),
+    
+    bf_st_exp_enroll_in = case_when(
+      st_exp_enroll_in == "" ~ "",
+      TRUE ~ recode(st_exp_enroll_in, !!!ENROLLMENT_CODE_MAPPING, .default = "REF") # Defined in config
+    ),
+    
+    bf_expo_enroll_in = case_when(
+      expo_enroll_in == "" ~ "",
+      TRUE ~ recode(expo_enroll_in, !!!ENROLLMENT_CODE_MAPPING, .default = "REF") # Defined in config
+    ),
+    
+    # Defined in config
+    bf_myca_flg = case_when(
+      myca_flag == "" ~ "",
+      TRUE ~ recode(myca_flag, !!!MYCA_MAPPING, .default = "R") # SAS cutoff "REF" to "R", so we have to keep it here
+    ),
+    
+    bf_mr_in = case_when(
+      mr_in == "" ~ "",
+      TRUE ~ recode(mr_in, !!!MR_IN_MAPPING, .default = "REF") # Defined in config
+    ),
+    
+    bf_purch_apr_rt = case_when(
+      purch_apr_rt > 0 ~ round(purch_apr_rt,2) %>% as.character(),
+      purch_apr_rt == -1 ~ "",
+      .default = "REF"),
+    
+    cv_cs_et_type = case_when(
+      between(tenure_var, 2, 4) ~ 1L,
+      between(tenure_var, 5, 15) ~ 2L,
+      .default = 3L
+    ),
+    
+    # Defined in config
+    cv_portfolio = unname(PORTFOLIO_MAPPING[marketer_code]),
+    
+    cv_mr_category = recode(mr_tier_prog_cd, !!!MR_CATEGORY_MAPPING, .default = NA_integer_), # Defined in config
+    
+    card_name = recode(marketer_code, !!!CARD_NAME_MAPPING), # Defined in config
+    
+    cv_amex_has_fee = if_else(
+      marketer_code %in% names(AMEX_FEE_MAPPING),
+      unname(AMEX_FEE_MAPPING[marketer_code]), # Defined in config
+      "REF"
+    ),
+  
+    #card anniversary date
+    card_anniv_dt = na_if(card_anniv_dt, "0001-01-01"),
+    anniv = as_date(card_anniv_dt, format = "%Y-%m-%d"),
+    bf_card_anniv_year = year(anniv),
+    bf_card_anniv_month = month(anniv),
+    
+    # Setup date
+    bf_setup_day = day(setup),
+    bf_setup_month = month(setup),
+    bf_setup_year = year(setup),
+       
+    # Prog Enter Date
+    mr_init_enroll_dt = na_if(mr_init_enroll_dt, "0001-01-01"),
+    enrolls = as_date(mr_init_enroll_dt, format = "%Y-%m-%d"),
+    bf_mr_init_enroll_year = year(enrolls),
+    bf_mr_init_enroll_month = month(enrolls),
+    bf_mr_init_enroll_day = day(enrolls),
+       
+    #Age
+    dInterviewDate = YEAR + (MONTH_NO/12),
+    dYOB = floor(dInterviewDate - raw_age),
+    year_of_birth = ifelse(is.na(raw_age) | dYOB < 1850 | dYOB > (year(Sys.Date()) - 17), 
+                           "", 
+                           as.character(dYOB)),
+  
+    generation = case_when(
+      year_of_birth == "" ~ "",
+      TRUE ~ GENERATION_MAPPING$labels[findInterval(dYOB, GENERATION_MAPPING$thresholds)] # Defined in config
+    ), 
+  
+    bdl_fico_bucket = case_when(is.na(raw_fico) | raw_fico == -1 ~ "",
+                                raw_fico < 650 ~ "1",
+                                raw_fico < 720 ~ "2",
+                                raw_fico >= 720 ~ "3"),
+    
+    CCSG_CENTURION_TIER = ""  # Set to an empty variable. Use to come from a file that has not been updated in a long time
+    )
+```
+
+## CHECKS FOR NEW VARIABLES
+
+- Most of these need to be hand checked since they were created by the same formulas that would be used to check their correctness
+
+```{r New Variable Checks}
+log_section_start("New Variable Checks")
+
+# Early Tenure
+missing_cs_et <- USCS_New_Vars %>% filter(is.na(cv_cs_et_type)) 
+log_check_result(nrow(missing_cs_et) == 0, "Early Tenure Type", "missing", nrow(missing_cs_et))
+
+# DMA
+invalid_dma_cd <- USCS_New_Vars %>% filter(replace_na(best_dma_cd,"") %in% c('','999','0'))
+invalid_dma <- USCS_New_Vars %>% filter(replace_na(best_dma,"") %in% c('','999','0'))
+log_check_result(nrow(invalid_dma_cd) == 0, "DMA CD", "validity")
+log_check_result(nrow(invalid_dma) == 0, "DMA", "validity")
+
+# Spend
+missing_spend <- USCS_New_Vars %>% filter(is.na(account_spend))
+log_check_result(nrow(missing_spend) == 0, "Account Spend", "missing", count = nrow(missing_spend))
+
+# ENroll
+ref_enroll <- USCS_New_Vars %>% filter(bf_st_exp_enroll_in == "REF")
+log_check_result(nrow(ref_enroll) == 0, "ST Exp Enroll", "missing", count = nrow(ref_enroll))
+
+# MYCA
+ref_myca_flag <- USCS_New_Vars %>% filter(myca_flag == "REF")
+log_check_result(nrow(ref_myca_flag) == 0, "MYCA Flag", "missing", count = nrow(ref_myca_flag))
+
+# MR IN
+missing_mr_in <- USCS_New_Vars %>% filter(is.na(bf_mr_in) | bf_mr_in == "")
+log_check_result(nrow(missing_mr_in) == 0, "MR IN", "missing", count = nrow(missing_mr_in))
+
+# Fee
+missing_fee <- USCS_New_Vars %>% filter(is.na(cv_amex_has_fee))
+log_check_result(nrow(missing_fee) == 0, "Has Fee Marketer Code", "missing", missing_fee$marketer_code)
+
+# Portfolio
+missing_portfolio <- USCS_New_Vars %>% filter(is.na(cv_portfolio))
+log_check_result(nrow(missing_portfolio) == 0, "Portfolio Marketer Code", "missing", missing_portfolio$marketer_code)
+
+# Manual Checks
+yobs_check <- USCS_New_Vars %>% mutate(age = ceiling(raw_age)) %>% 
+  distinct(dInterviewDate, dYOB, age, year_of_birth) %>% arrange(age) %>% 
+  make_nice_table("Checking year of birth calculations") # Are ages correct
+
+gen_check <- USCS_New_Vars %>% distinct(year_of_birth, generation) %>% 
+  arrange(year_of_birth) %>% 
+  make_nice_table("Checking Generation calculations")
+
+fico_check <- USCS_New_Vars %>% distinct(raw_fico, bdl_fico_bucket) %>% 
+  arrange(bdl_fico_bucket, raw_fico) %>% 
+  make_nice_table("Checking FICO Bucket")
+```
+
+
+```{r Missing Names}
+# Identify people with missing first and last names
+missing_name <- USCS_New_Vars %>% filter(is.na(first_nm) | is.na(last_nm)) %>% 
+  select(customer_id,first_nm, last_nm)
+
+log_check_result(nrow(missing_name) == 0, "First or Last Name", "missing", count=nrow(missing_name))
+
+# Fill in the blank names with "Valued Card Member" because First and Last name
+USCS_New_Vars <- USCS_New_Vars %>% 
+  mutate(needs_default_name = is.na(first_nm) | is.na(last_nm) | nchar(first_nm) == 10,
+    first_nm = if_else(needs_default_name, "Valued Card", first_nm),
+         last_nm = if_else(needs_default_name, "Member", last_nm)) %>% select(-needs_default_name)
+```
+
+```{r Subject Line Insert message=F}
+# Read in Subject Line Code Info
+subject_line_insert_info <- load_subject_line_info()
+
+# check if there are records that did not match with the Subject line insert file
+USCS_New_Vars <- USCS_New_Vars %>% left_join_suppress(subject_line_insert_info)
+
+miss_inserts <- USCS_New_Vars[is.na(USCS_New_Vars$subject_line_insert),]
+log_check_result(nrow(miss_inserts) == 0, "Subject Line Insert", "missing", count = nrow(miss_inserts))
+
+ia_subline_freq <- USCS_New_Vars %>% 
+  freq_table(c("ia_id", "subject_line_insert"), 
+             "Freq table IA ID vs Subject Line insert")
+```
+
+```{r Name Replacement message = F}
+# Create new variable and replace empty values with "American Express Card"
+USCS_New_Vars <- USCS_New_Vars %>% 
+  mutate(sv_subject_line_insert = if_else(subject_line_insert == "", "American Express Card", subject_line_insert))
+
+# Read in Card Art URLs
+card_art_info <- load_card_art()
+
+# Merge data
+USCS_New_Vars <- USCS_New_Vars %>% left_join_suppress(card_art_info)
+
+marketer_sv_card_freq <- USCS_New_Vars %>% freq_table(c("marketer_code","sv_card_art"), "Marketer Code vs SV Card Freq Table")
+```
+
+```{r Reformatting}
+date_cols <- c("setup_dt", "card_anniv_dt", "mr_init_enroll_dt") # date columns to "M/D/YYYY" format
+
+rounding_cols <- c("account_spend", "size_of_wallet", "share_of_wallet_amex", 
+                  "customer_spend", "raw_age", "t_add")
+
+ref_cols <- c("card_anniv_dt", "bf_card_anniv_year", "bf_card_anniv_month",
+              "setup_dt", "bf_setup_year", "bf_setup_month", "bf_setup_day")
+
+USCS_Reformatted <- USCS_New_Vars %>% 
+  mutate(
+    # Format dates ; Remove leading 0s
+    across(all_of(date_cols),  ~gsub("^0", "", gsub("/0", "/", format(as.Date(.x), "%m/%d/%Y")))),
+    
+    # Truncate ID
+    gmpi_base_cust_id = substr(gmpi_base_cust_id, 5, 19),
+    
+    # Round columns
+    across(all_of(rounding_cols), ~round(., 2)),
+    account_share_of_wallet = txt_sprintf("%.14f", account_share_of_wallet),
+    
+    # Handle missing values
+    across(all_of(ref_cols), ~ifelse(. == "" | is.na(.), "REF", .))
+  )
+```
+
+```{r Final Selection message=F}
+# Merging the data frames
+USCS_Final <- USCS_Reformatted %>% 
+  arrange(is_main, parse_number(cell_code), sp_code, sv_spend, t_add) %>% # Sort Data 
+  set_names(str_to_upper(names(.))) %>% 
+  # Choose only desired variables and name them how we want them named
+  select(BF_GMPI_BASE_CUST_ID = GMPI_BASE_CUST_ID,
+        FIRST_NM,
+        LAST_NM,
+        BF_CITY_NM = CITY_NM,
+        BF_STATE_TX = STATE_TX,
+        BF_US_ZIP = US_ZIP,
+        BF_LAST5 = LAST5,
+        BF_IA_ID = IA_ID,
+        BF_FMLY_DS_TX = FMLY_DS_TX,
+        BF_CARD_ROLLUP_DS_TX = CARD_ROLLUP_DS_TX,
+        BF_CONS_FRIENDLY_DS_TX = CONS_FRIENDLY_DS_TX,
+        BF_SETUP_DT = SETUP_DT,
+        BF_BEST_DMA_CD = BEST_DMA,
+        BF_MAIL_ID = MAIL_ID,
+        BF_CELL_CODE = CELL_CODE,
+        BF_MARKETER_CODE = MARKETER_CODE,
+        BF_MYCA_FLG,
+        BF_MR_IN,
+        BF_ACCOUNT_SPEND = ACCOUNT_SPEND,
+        BF_SIZE_OF_WALLET = SIZE_OF_WALLET,
+        BF_SHARE_OF_WALLET_AMEX = SHARE_OF_WALLET_AMEX,
+        BF_CARD_ANNIV_DT = CARD_ANNIV_DT,
+        BF_AGE_RANGE = AGE_RANGE,
+        BF_CUSTOMER_SPEND = CUSTOMER_SPEND,
+        BF_FICO_RANGE,
+        BF_ACTIVE_SUPP_CT = ACTIVE_SUPP_CT,
+        BF_ST_EXP_ENROLL_IN,
+        BF_EXPO_ENROLL_IN,
+        BF_MR_TIER_PROG_CD = MR_TIER_PROG_CD,
+        BF_MR_INIT_ENROLL_DT = MR_INIT_ENROLL_DT,
+        BF_AVLBL_PNTS = AVLBL_PNTS,
+        BF_ACCT_TRANS_PNTS_NO = ACCT_TRANS_PNTS_NO,
+        BF_TOT_RVLV_INT_AM = TOT_RVLV_INT_AM,
+        BF_RVLV_MTHS_NO = RVLV_MTHS_NO,
+        BF_TOT_LOC_INT_AM = TOT_LOC_INT_AM,
+        BF_TOT_LOC_INT_MTH_NO = TOT_LOC_INT_MTH_NO,
+        BF_TOT_LOC_AM = TOT_LOC_AM,
+        SV_SP_CODE = SP_CODE,
+        SV_AUGMENT_CELL,
+        SV_STUDY_OPENEND = MV_NPS_IND,
+        SV_MR_IN = MR_IN_N,
+        SV_TENURE_QUANT = TENURE_VAR,
+        BF_RDM_NET_12M_CT = RDM_NET_12M_CT,
+        BF_LINE_OF_CREDIT_AM = LINE_OF_CREDIT_AM,
+        BF_PURCH_APR_RT,
+        SV_SUBJECT_LINE = SUBJECT_LINE,
+        SV_PRODUCT_TENURE = T_ADD,
+        WV_WEIGHTING_SEGMENT,
+        SV_SPEND,
+        SURVEY_TYPE,
+        COUNTRY,
+        COUNTRY_CODE,
+        LANGUAGE,
+        CV_PORTFOLIO,
+        CV_INTERVIEW_DATE,
+        CV_AMEX_HAS_FEE,
+        CV_MR_CATEGORY,
+        CV_CS_ET_TYPE,
+        CCSG_CENTURION_TIER,
+        CV_BF_ACCOUNT_SHARE_OF_WALLET = ACCOUNT_SHARE_OF_WALLET,
+        BF_CARD_ANNIV_YEAR,
+        BF_CARD_ANNIV_MONTH,
+        BF_MR_INIT_ENROLL_YEAR,
+        BF_MR_INIT_ENROLL_MONTH,
+        BF_MR_INIT_ENROLL_DAY,
+        BF_SETUP_YEAR,
+        BF_SETUP_MONTH,
+        BF_SETUP_DAY,
+        CARD_NAME,
+        BDL_AGE = RAW_AGE,
+        BDL_FICO_SCORE = RAW_FICO,
+        YEAR_OF_BIRTH,
+        CV_Generation_New = GENERATION,
+        BDL_FICO_BUCKET,
+        SV_SUBJECT_LINE_INSERT,
+        SV_CARD_ART)
+```
+
+
+```{r Write to CSV}
+USCS_Final %>% write_csv("../Files_to_send/AmexGABMUSCSSurvey_{YEAR}{MONTH_2_DIGITS}_{Sys.Date()}.csv" %>% f_str(), na ="")
+```
+
+```{r Save}
+# Store final dataset for ease of loading in formats
+# save(USCS_Final, file=f_str("../Data/USCS_final_{MONTH}_{YEAR}.Rdata"))
+```
+
+```{r Clean up Workspace}
+rm.all.but(keep=c('USCS_Final', 'MONTH', 'YEAR'))
+```
+
+```{r Reload in Final Dataset}
+# Load final dataset for quick checks if needed
+# load(f_str("../Data/USCS_final_{MONTH}_{YEAR}.Rdata"))
+```
+

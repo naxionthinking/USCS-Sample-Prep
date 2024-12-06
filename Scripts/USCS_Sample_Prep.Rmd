@@ -373,7 +373,7 @@ negative_spend_validation_results <- USCS_Sample %>% filter(is_main) %>% check_n
 -   The code reads in a list customer_ids classified segments.
 -   There should be less than 3000 people overlapping with the sample and the open segment
 
-```{r Load Open Seg message=FALSE}
+```{r Load Open Seg, message=FALSE}
 # Load in new segment data
 open_seg <- load_open_seg()
 ```
@@ -434,7 +434,7 @@ USCS_Sample <- USCS_Sample %>%
 saveWorkbook(Diagnostic_WB, file = f_str("../Files_to_send/USCS_Diagnostics_{MONTH}_{YEAR}-{Sys.Date()}.xlsx"), overwrite = TRUE)
 ```
 
-```{r Clean up Workspace message=FALSE}
+```{r Clean up Workspace, message=FALSE}
 # Clean up the environment
 rm.all.but(keep = c('USCS_Sample'))
 source('USCS_Helper_Functions.R')
@@ -667,7 +667,7 @@ USCS_New_Vars <- USCS_New_Vars %>%
          last_nm = if_else(needs_default_name, "Member", last_nm)) %>% select(-needs_default_name)
 ```
 
-```{r Subject Line Insert message=F}
+```{r Subject Line Insert, message=F}
 # Read in Subject Line Code Info
 subject_line_insert_info <- load_subject_line_info()
 
@@ -682,7 +682,7 @@ ia_subline_freq <- USCS_New_Vars %>%
              "Freq table IA ID vs Subject Line insert")
 ```
 
-```{r Name Replacement message = F}
+```{r Name Replacement, message = F}
 # Create new variable and replace empty values with "American Express Card"
 USCS_New_Vars <- USCS_New_Vars %>% 
   mutate(sv_subject_line_insert = if_else(subject_line_insert == "", "American Express Card", subject_line_insert))
@@ -722,7 +722,7 @@ USCS_Reformatted <- USCS_New_Vars %>%
   )
 ```
 
-```{r Final Selection message=F}
+```{r Final Selection, message=F}
 # Merging the data frames
 USCS_Final <- USCS_Reformatted %>% 
   arrange(is_main, parse_number(cell_code), sp_code, sv_spend, t_add) %>% # Sort Data 
@@ -816,7 +816,7 @@ USCS_Final %>% write_csv("../Files_to_send/AmexGABMUSCSSurvey_{YEAR}{MONTH_2_DIG
 # save(USCS_Final, file=f_str("../Data/USCS_Final_{MONTH}_{YEAR}-{Sys.Date()}.Rdata"))
 ```
 
-```{r Clean up Workspace}
+```{r Clean Workspace}
 rm.all.but(keep=c('USCS_Final', 'MONTH', 'YEAR'))
 ```
 

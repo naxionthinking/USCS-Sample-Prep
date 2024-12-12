@@ -150,8 +150,7 @@ log_check_result(
 ```{r Add Helper Variables}
  # Add some helper variables -- most are not included in the output
 USCS_Sample <- USCS_Sample %>%
-  mutate(raw_setup_dt = setup_dt,
-         setup_dt = na_if(setup_dt,  "0001-01-01"),
+  mutate(setup_dt = na_if(setup_dt,  "0001-01-01"),
          setup = as_date(setup_dt, format = "%Y-%m-%d"),
          
          # Official tenure in months
@@ -826,3 +825,23 @@ rm.all.but(keep=c('USCS_Final', 'MONTH', 'YEAR'))
 # load(f_str("../Data/USCS_Final_{MONTH}_{YEAR}-{FINAL_SAVE_DATE}.Rdata"))
 ```
 
+### Send Email to Operations
+
+First go to the `Files to Send` folder and copy the final diagnostic file and the final sample file to the PM drive in the Communications folder and the All Sample folder respectively. Then send links to the files to operations along with a brief overview of removals.
+
+Here is an example: 
+
+  Hi Ryan,
+  
+  The November USCS Sample has been prepped. It can be found here : \\pm1\27-610\Sampling-Weighting\2024\2024_11\All Sample\AmexGABMUSCSSurvey_202411_2024-10-29.csv
+  
+  The following excel contains diagnostic information about cell frequencies and individual samples that were removed: \\pm1\27-610\Sampling-Weighting\2024\2024_11\Communications\USCS_Diagnostics_NOV_2024.xlsx
+    •	There were 23 people removed due to bad setup dates – missing or 01-01-0001
+    •	There were 28 people removed for having birth years over 120 years ago. Everyone is between 120 and 130, except for one oddity of someone who is supposedly 371. 
+    •	There were 31 people removed for bad tenure
+      o	All were for Cell 35, which has a desired maximum tenure of 4 months. All were set up at the end of June 2024, which is greater than the 4 months.  
+  
+  Let us know if you are okay with these being deleted or if you want them put back.
+  
+  Best,
+  Beck

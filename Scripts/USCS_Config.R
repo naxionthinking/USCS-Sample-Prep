@@ -68,7 +68,7 @@ if (length(.spend_file) == 0) stop("Spend file not found")
 # Main cell codes
 MAIN_CELL_CODES <- c("CCSG01", "CCSG02", "CCSG03")
 
-# Marketer codes with allowed negative spend
+# Marketer codes NOT allowed negative spend
 .MARKETER_CODES_NO_NEGATIVES <- c("SP111", "SP112", "SP113", "SP114", "SP115", 
                           "SP117", "SP118", "SP123", "SP127", "SP132", 
                           "SP136", "SP145", "SP153", "SP156")
@@ -197,7 +197,6 @@ MR_IN_MAPPING <- c(
   "N" = "2"
 )
 
-# Special case for MYCA flag where REF is "R"
 MYCA_MAPPING <- c(
   "Y" = "1",
   "N" = "2"

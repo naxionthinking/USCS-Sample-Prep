@@ -449,7 +449,7 @@ assign_weight_conditions <- function(weight_conditions){
                            !str_detect(weighting_segment, "SP")  ~ 5,
                            TRUE ~ 6)) %>% 
     # Create the full condition by bringing together all conditions
-    unite(col = 'full_cond', sp_cond, tenure_cond, spend_cond, naw_cond, 
+    unite(col = 'full_cond', sp_cond, tenure_cond, spend_cond, cell_code_cond, 
           sep = " & ", na.rm=TRUE) %>% # Removes any conditions that are not relevant to the given segment
     mutate(full_cond = glue("{full_cond} ~ '{weighting_segment}'")) %>% 
     arrange(ordering) %>% 

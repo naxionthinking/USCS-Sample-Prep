@@ -56,7 +56,7 @@ Diagnostic_WB <- createWorkbook()
 - The code may be removed for loading spend in the future
 
 ```{r Load in base and spend dataframes}
-USCS_Base <- load_base() 
+USCS_Base <- load_base(skip=2) 
 # USCS_Spend <- load_spend()
 ```
 
@@ -361,7 +361,7 @@ negative_spend_validation_results <- USCS_Sample %>% filter(is_main) %>% check_n
 ```{r UC File Message}
 # sp154 <- USCS_Sample %>% filter(is_main) %>% filter(marketer_code == 'SP154')
 # 
-#cli_alert_info('There were {nrow(sp154)} samples pulled for Marketer Code 154. The UC file for Q2 2023 shows that the post suppression count percentage is 0.1% for 0 spend. Given the small sample pulled for SP154 and the 0.1% likelihood that the sample is 0 spend, having no 0 spend in our sample is okay.')
+#cli_alert_info('There were {nrow(sp154)} samples pulled for Marketer Code 154. The UC file for Q2 {YEAR} shows that the post suppression count percentage is 0.1% for 0 spend. Given the small sample pulled for SP154 and the 0.1% likelihood that the sample is 0 spend, having no 0 spend in our sample is okay.')
 # 
 # sp154 %>% select(account_spend) %>% summary()
 ```

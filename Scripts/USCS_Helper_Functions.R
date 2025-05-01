@@ -61,7 +61,7 @@ count_missing <- function(data, miss_vars){
 # Type is either "c" for character/text or "n" for numeric
 # ------------------------------------------------------------------------------
 
-load_base <- function(){
+load_base <- function(skip=2){
   # df_info is the mapping of variable name, length, and column type
   df_info <- data.frame(c('REC_TYPE',               1,'c'),
                         c('GMPI_BASE_CUST_ID',     19,'c'),
@@ -153,19 +153,18 @@ load_base <- function(){
   #### Verify file format is what we expect
   total_length <- sum(df_info$col_widths)
   
-  # Read in the third line of the file
-  # Skipping possible weird first 2 lines
-  third_line <- read_lines(.BASE_PATH, skip = 2, n_max = 1)
+  # Read in the first valid line
+  first_line <- read_lines(.BASE_PATH, skip = skip, n_max = 1)
   
-  if (nchar(third_line) != total_length) {
+  if (nchar(first_line) != total_length) {
     cli_abort(c("Input widths do not match expected column widths. Must fix.",
                 "i" = "Expected width: {total_length}",
-                "x" = "Actual width: {nchar(third_line)}"), .envir = environment())
+                "x" = "Actual width: {nchar(first_line)}"), .envir = environment())
   }
   
   # We use df_info to load in the file properly
   df <- read_fwf(file = .BASE_PATH,
-                 skip = 2, # If the raw file contains the funky lines on top, include a skip
+                 skip = skip, # If the raw file contains the funky lines on top, include a skip
                  col_positions = fwf_widths(df_info$col_widths),
                  col_types = paste0(df_info$col_types, collapse = ""), # collapses into something like 'cccnnnccc'
                  na = c("")) %>% # What missing values are represented as in the text file

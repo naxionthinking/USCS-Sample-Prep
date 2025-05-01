@@ -33,7 +33,7 @@ MONTH_2_DIGITS <- sprintf("%02d", MONTH_NO) # Two digit month
 .SAMPLE_PREP_PATH <- "../USCS_Sample_Prep_Helper_{MONTH}_{YEAR}.xlsx" %>% f_str() 
 
 ## This is where the raw files lie. Only thing I've seen change is sometimes "raw" is "raw files"
-.raw_files_path <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}/{YEAR}_{MONTH_2_DIGITS}/raw' %>% f_str() 
+.raw_files_path <- '\\\\pm1/27-610/Sampling-Weighting/{YEAR}/{YEAR}{MONTH_2_DIGITS}/raw' %>% f_str() 
 
 # Get base and spend files
 .raw_files <- list.files(.raw_files_path)

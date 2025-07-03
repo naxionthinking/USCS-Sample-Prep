@@ -56,7 +56,7 @@ Diagnostic_WB <- createWorkbook()
 - The code may be removed for loading spend in the future
 
 ```{r Load in base and spend dataframes}
-USCS_Base <- load_base(skip=2) 
+USCS_Base <- load_base(skip=2) # Start with the skip at 0. If the loading fails, there is commonly some weird characteres at the start of the file, so change the skip to 2 after that.
 # USCS_Spend <- load_spend()
 ```
 
@@ -345,6 +345,8 @@ if(nrow(to_remove_yob) > 0) {
     add_and_write_sheet(Diagnostic_WB, "Removed_YOB", .)
 }
 ```
+
+IMPORTANT: IF there are people to remove due to tenure, make sure to check the `to_remove_tenure` dataset. If you see the all of the removals are because of a couple day difference, update the `DATE_SAMPLE_RECIEVED` variable in the USCS_Config.R file since we most likely don't want to actually flag those for removal. Then rerun the code from the start. 
 
 
 ## Marketer Code Spend Checking
@@ -812,7 +814,7 @@ USCS_Final %>% write_csv("../Files_to_send/AmexGABMUSCSSurvey_{YEAR}{MONTH_2_DIG
 
 ```{r Save}
 # Store final dataset for ease of loading in formats
-# save(USCS_Final, file=f_str("../Data/USCS_Final_{MONTH}_{YEAR}-{Sys.Date()}.Rdata"))
+save(USCS_Final, file=f_str("../Data/USCS_Final_{MONTH}_{YEAR}-{Sys.Date()}.Rdata"))
 ```
 
 ```{r Clean Workspace}

@@ -55,7 +55,7 @@ if (length(.spend_file) == 0) stop("Spend file not found")
 .file_lookups <- f_str("../../../File Lookups")# L:/Amex.549/Sample/2023/File Lookups
 
 ## Change file names if they change
-.OPEN_SEG_PATH <-       "{.file_lookups}/Managed_List_2024_SAT 06.25.24.csv"  %>% f_str()
+.OPEN_SEG_PATH <-       "{.file_lookups}/Managed_List_2025_2026_SAT.csv"  %>% f_str()
 .SUBJECT_LINE_PATH <-   "{.file_lookups}/MarketVoice - Card Lookup20230124_ForAnalytics.csv"  %>% f_str()
 # CENTURION_TIER_PATH <- "{.file_lookups}/760_CENTURION_TIER_CVs.csv" %>% f_str() # No longer used
 .CARD_ART_PATH <-       "{.file_lookups}/Card Art URLs 20230929.csv" %>% f_str()

@@ -21,14 +21,14 @@ Here's an overview of git and some basic git commands: [Data Camp git cheat shee
 3.  Run the following command to clone the `main` branch:
     - This will create a clone of the template repository in the directory you specified above
 ```
-git clone https://github.com/Beck-DeYoung-NA/USCS-Sample-Prep.git --branch main --single-branch
+git clone https://github.com/naxionthinking/USCS-Sample-Prep.git --branch main --single-branch
 ```
 4. That's it. Now a new folder called "USCS_Sample_Prep" has been created with all the files and scripts you need.
 
 P.S., if you are doing this task a lot and do not want to always consult the readMe for the cloning command, you can create an alias.
 
 ```
-git config --global alias.uscs "clone https://github.com/Beck-DeYoung-NA/USCS-Sample-Prep.git --branch main --single-branch"
+git config --global alias.uscs "clone https://github.com/naxionthinking/USCS-Sample-Prep.git --branch main --single-branch"
 ```
 
 This will create a new git command for you, so to clone the repository you just need to run

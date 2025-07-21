@@ -669,3 +669,22 @@ add_and_write_sheet <- function(wb, sheet_name, data){
   addWorksheet(wb, sheet_name)
   writeData(wb, sheet_name, data)
 }
+
+# The cfrsuite package has been discontinued but we use this function. So defining it on my own.
+# Basically the same as sprintf but just handles NA's
+txt_sprintf <- function (fmt, ...) 
+{
+  x <- sprintf(fmt = fmt, ...)
+  ldots <- list(...)
+  if (length(ldots) > 0) {
+    inputi <- order(sapply(ldots, length), decreasing = TRUE)
+    make_na <- is.na(ldots[[inputi[1]]])
+    if (length(ldots) >= 2) {
+      for (i in inputi[-1]) {
+        make_na <- make_na | is.na(ldots[[i]])
+      }
+    }
+    x[make_na] <- NA_character_
+  }
+  x
+}

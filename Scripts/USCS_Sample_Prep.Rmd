@@ -33,8 +33,7 @@ pacman::p_load("tidyverse",
                "openxlsx",
                "cli",
                "janitor",
-               "lubridate",
-               "crfsuite")
+               "lubridate")
 
 # Load in configuration file variables and functions
 source('USCS_Helper_Functions.R') 
